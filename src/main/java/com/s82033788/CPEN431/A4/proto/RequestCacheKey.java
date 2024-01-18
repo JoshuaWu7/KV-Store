@@ -11,15 +11,15 @@ public class RequestCacheKey {
     }
 
     @Override
-    public int hashCode() {
-        return Arrays.hashCode(requestID);
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RequestCacheKey that = (RequestCacheKey) o;
+        return Arrays.equals(requestID, that.requestID);
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if(obj == this) return true;
-        if(!(obj instanceof RequestCacheKey)) return false;
-
-        return Arrays.equals((byte[]) obj, requestID);
+    public int hashCode() {
+        return Arrays.hashCode(requestID);
     }
 }
