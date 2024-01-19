@@ -4,12 +4,25 @@ import java.util.Arrays;
 import java.util.Objects;
 
 public class ValueWrapper {
-    byte[] value;
-    int version;
+    /* TODO Warning, do not mutate*/
+    private byte[] value;
+    private int version;
 
     public ValueWrapper(byte[] value, int version) {
         this.value = value;
         this.version = version;
+    }
+
+    public ValueWrapper(int version) {
+        this.version = version;
+    }
+
+    public byte[] getValue() {
+        return value;
+    }
+
+    public int getVersion() {
+        return version;
     }
 
     @Override

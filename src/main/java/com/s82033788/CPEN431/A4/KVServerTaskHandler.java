@@ -11,9 +11,12 @@ import java.net.DatagramSocket;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.zip.CRC32;
+
+import static com.s82033788.CPEN431.A4.proto.ResponseType.*;
 
 public class KVServerTaskHandler implements Runnable {
     DatagramPacket iPacket;
@@ -21,19 +24,43 @@ public class KVServerTaskHandler implements Runnable {
     Cache<RequestCacheKey, RequestCacheValue> requestCache;
     ConcurrentMap<KeyWrapper, ValueWrapper> map;
     ReadWriteLock mapLock;
-    DatagramPacket outgoingResponse;
+    ThreadPoolExecutor tpe; //this is concurrently inconsequential, they can just try again later.
+    //DatagramPacket outgoingResponse;
+    boolean responseSent = false;
+
+    // Constants
     final static int KEY_MAX_LEN = 32;
     final static int VALUE_MAX_LEN = 10_000;
+    final static int MEMORY_SAFETY = 524_288;
+
+    public final static int RES_CODE_INVALID_KEY = 0x6;
+
+    public final static int RES_CODE_INVALID_VALUE = 0x7;
+
+    public final static int RES_CODE_INVALID_OPCODE = 0x5;
+    public final static int RES_CODE_SUCCESS = 0x0;
+    public final static int RES_CODE_INVALID_OPTIONAL = 0x21;
+    public final static int RES_CODE_RETRY_NOT_EQUAL = 0x22;
+    public final static int RES_CODE_NO_KEY = 0x01;
+    public final static int RES_CODE_NO_MEM = 0x2;
+    public final static int RES_CODE_OVERLOAD = 0x3;
+
+    //parameters
+
+    public final static int CACHE_OVL_WAIT_TIME = 80;
+    public final static int THREAD_OVL_WAIT_TIME = 10;
 
     public KVServerTaskHandler(DatagramPacket iPacket,
                                DatagramSocket socket,
                                Cache<RequestCacheKey, RequestCacheValue> requestCache,
-                               ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock mapLock) {
+                               ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock mapLock,
+                               ThreadPoolExecutor tpe) {
         this.iPacket = iPacket;
         this.socket = socket;
         this.requestCache = requestCache;
         this.map = map;
         this.mapLock = mapLock;
+        this.tpe = tpe;
     }
 
 
@@ -42,28 +69,29 @@ public class KVServerTaskHandler implements Runnable {
         //TODO perform memory and cache runtime checks
 
         //cache might have data race, be alert.
-        if (outgoingResponse != null) throw new IllegalStateException();
+        if (responseSent) throw new IllegalStateException();
 
         //decode the message
         UnwrappedMessage unwrappedMessage;
         try {
             unwrappedMessage = unpackPacket(iPacket);
         } catch (InvalidProtocolBufferException e) {
-            System.err.println("Packet does not match .proto");
-            System.err.println(e);
-            System.err.println("Stopping packet handling and returning");
+            //System.err.println("Packet does not match .proto");
+            //System.err.println(e);
+            //System.err.println("Stopping packet handling and returning");
 
             //No response, like A1/A2
             return;
         } catch (InvalidChecksumException e) {
-            System.err.println("Packet checksum does not match");
-            System.err.println("Stopping packet handling and returning");
+            //System.err.println("Packet checksum does not match");
+            //System.err.println("Stopping packet handling and returning");
 
             //no response, like A1/A2
             return;
         }
 
-       //TODO check cache and return early if hit
+
+       //TODO check cache space remaining
         RequestCacheValue reply;
         try {
             reply = requestCache.get(new RequestCacheKey(unwrappedMessage.reqID.toByteArray(), unwrappedMessage.crc),
@@ -74,25 +102,32 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         //assert that the request is exactly the same
-        if(reply.incomingCRC != unwrappedMessage.crc) {
+        if(reply.getIncomingCRC() != unwrappedMessage.crc) {
             try {
-                replyMsg(unwrappedMessage.reqID, replyRetryNotEqual());
+                RequestCacheValue res = new RequestCacheValue.Builder(
+                        unwrappedMessage.crc,
+                        iPacket.getAddress(),
+                        iPacket.getPort(),
+                        unwrappedMessage.reqID)
+                        .setResponseType(RETRY_NOT_EQUAL)
+                        .build();
+
+                sendResponse(res.generatePacket());
             } catch (IOException e) {
-                System.err.println("Unable to send mismatched retry due to IO");
-                System.err.println("Will not send response packet");
+                //System.err.println("Unable to send mismatched retry due to IO");
+                //System.err.println("Will not send response packet");
             }
             return;
         }
 
         //send the reply, no concurrency problem here, since packet will be sent eventually.
         // (tbh don't even need to synchronize load other than to avoid double loading)
-        if (outgoingResponse == null) {
+        if (!responseSent) {
             try {
-                outgoingResponse = reply.result;
-                socket.send(reply.result);
+                sendResponse(reply.generatePacket());
             } catch (IOException e) {
-                System.err.println("Unable to send cached response due to IO");
-                System.err.println("Will not send response packet");
+                //System.err.println("Unable to send cached response due to IO");
+                //System.err.println("Will not send response packet");
             }
             return;
         }
@@ -103,44 +138,76 @@ public class KVServerTaskHandler implements Runnable {
 
 
         UnwrappedPayload payload;
+        RequestCacheValue.Builder scaf = new RequestCacheValue.Builder(
+                unwrappedMessage.crc,
+                iPacket.getAddress(),
+                iPacket.getPort(),
+                unwrappedMessage.reqID);
 
         try {
             payload = unpackPayload(unwrappedMessage.payload);
         }  catch (ValueLengthException e) {
-            System.err.println("Value field exceeds size");
-            System.err.println("Sending rejection packet");
-
-            DatagramPacket responsePacket;
-            responsePacket = replyMsg(unwrappedMessage.reqID, replyInvalidValuePayload());
-            return new RequestCacheValue(responsePacket, unwrappedMessage.crc);
-
+            //System.err.println("Value field exceeds size");
+            //System.err.println("Sending rejection packet");
+            RequestCacheValue res;
+            scaf.setResponseType(INVALID_VALUE);
+            res = scaf.build();
+            sendResponse(res.generatePacket());
+            return res;
         } catch (KeyLengthException e) {
-            System.err.println("Value field exceeds size");
-            System.err.println("Sending rejection packet");
+            //System.err.println("Value field exceeds size");
+            //System.err.println("Sending rejection packet");
 
-            DatagramPacket responsePacket;
-            responsePacket = replyMsg(unwrappedMessage.reqID, replyInvalidValuePayload());
-            return new RequestCacheValue(responsePacket, unwrappedMessage.crc);
+            scaf.setResponseType(INVALID_KEY);
+            RequestCacheValue res = scaf.build();
+            sendResponse(res.generatePacket());
+            return res;
         }
+
+        //overload
+        //TODO replace cache to reference inside map, rather than whole packet.
+        if(requestCache.size() >= KVServer.CACHE_SZ){
+            System.out.println("Cache overflow. Delay Requested");
+            RequestCacheValue res = new RequestCacheValue.Builder(unwrappedMessage.crc,
+                    iPacket.getAddress(),
+                    iPacket.getPort(),
+                    unwrappedMessage.reqID)
+                    .setResponseType(OVERLOAD_CACHE)
+                    .build();
+
+            sendResponse(res.generatePacket());
+            return res;
+        }
+////
+//        if(tpe.getActiveCount() - 1 >= tpe.getMaximumPoolSize())
+//        {
+//            DatagramPacket responsePacket;
+//            responsePacket = replyMsg(unwrappedMessage.reqID, replyOverloadThreads());
+//            return new RequestCacheValue(responsePacket, unwrappedMessage.crc);
+//        }
 
         //process the packet by request code
         ByteString reqID = unwrappedMessage.reqID;
+        RequestCacheValue res;
         switch(payload.command)
         {
-            case 0x01: handlePut(reqID, payload); break;
-            case 0x02: handleGet(reqID, payload); break;
-            case 0x03: handleDelete(reqID, payload); break;
-            case 0x04: handleShutdown(reqID, payload); break;
-            case 0x05: handleWipeout(reqID, payload);  break;
-            case 0x06: handleIsAlive(reqID, payload); break;
-            case 0x07: handleGetPID(reqID, payload); break;
-            case 0x08: handleGetMembershipCount(reqID, payload);  break;
+            case 0x01: res = handlePut(scaf, payload); break;
+            case 0x02: res = handleGet(scaf, payload); break;
+            case 0x03: res = handleDelete(scaf, payload); break;
+            case 0x04: res = handleShutdown(scaf, payload); break;
+            case 0x05: res = handleWipeout(scaf, payload);  break;
+            case 0x06: res = handleIsAlive(scaf, payload); break;
+            case 0x07: res =  handleGetPID(scaf, payload); break;
+            case 0x08: res = handleGetMembershipCount(scaf, payload);  break;
 
-            default: replyMsg(reqID, replyInvalidOpcode());
+            default: {
+                res = scaf.setResponseType(INVALID_OPCODE).build();
+                sendResponse(res.generatePacket());
+            }
         }
 
-        if(outgoingResponse == null) throw new IllegalStateException();
-        return new RequestCacheValue(outgoingResponse, unwrappedMessage.crc);
+        if(!responseSent) throw new IllegalStateException();
+        return res;
     }
 
 
@@ -189,162 +256,116 @@ public class KVServerTaskHandler implements Runnable {
                 deserialized.hasVersion() );
     }
 
+    private void sendResponse(DatagramPacket d) throws IOException {
+        if (responseSent) throw new IllegalStateException();
+
+        responseSent = true;
+        socket.send(d);
+    }
+
 
     //helper function to send a packet given payload and id. Mutates outgoingResponse
-    private DatagramPacket replyMsg(ByteString id, ByteString payload) throws IOException {
-        //check that response to this incoming packet has not been sent
-        if(outgoingResponse != null) throw new IllegalStateException();
-
-        //prepare checksum
-        byte[] fullBody = id.concat(payload).toByteArray();
-        CRC32 crc32 = new CRC32();
-        crc32.update(fullBody);
-        long msgChecksum = crc32.getValue();
-
-        //prepare message
-        byte[] msg = Message.Msg.newBuilder()
-                    .setMessageID(id)
-                    .setPayload(payload)
-                    .setCheckSum(msgChecksum)
-                    .build()
-                    .toByteArray();
-
-        DatagramPacket pkt = new DatagramPacket(msg, msg.length, iPacket.getAddress(), iPacket.getPort());
-        socket.send(pkt);
-        outgoingResponse = pkt;
-        return pkt;
-    }
-
-    //Helper functions to generate payloads
-    private ByteString replyInvalidKeyPayload() {
-        return KeyValueResponse.KVResponse.newBuilder()
-                .setErrCode(6)
-                .build()
-                .toByteString();
-    }
-
-    private ByteString replyInvalidValuePayload() {
-        return KeyValueResponse.KVResponse.newBuilder()
-                .setErrCode(7)
-                .build()
-                .toByteString();
-    }
-
-    private ByteString replyInvalidOpcode() {
-        return KeyValueResponse.KVResponse.newBuilder()
-                .setErrCode(5)
-                .build()
-                .toByteString();
-    }
-
-    private ByteString replyMembershipCount(int count)
-    {
-        return KeyValueResponse.KVResponse.newBuilder()
-                .setErrCode(0x0)
-                .setMembershipCount(count)
-                .build()
-                .toByteString();
-    }
-
-    private ByteString replyPID(long pid) {
-        return KeyValueResponse.KVResponse.newBuilder()
-                .setErrCode(0x0)
-                .setPid(Math.toIntExact(pid))
-                .build()
-                .toByteString();
-    }
-
-    private ByteString replyIsAlive() {
-        return replySuccessOnly();
-    }
-
-    private ByteString replySuccessOnly() {
-        return KeyValueResponse.KVResponse.newBuilder()
-                .setErrCode(0x0)
-                .build()
-                .toByteString();
-    }
-
-    private ByteString replyInvalidOptionalVal() {
-        return KeyValueResponse.KVResponse.newBuilder()
-                .setErrCode(0x21)
-                .build()
-                .toByteString();
-    }
-
-    private ByteString replyRetryNotEqual() {
-        return KeyValueResponse.KVResponse.newBuilder()
-                .setErrCode(0x22)
-                .build()
-                .toByteString();
-    }
-
-    private ByteString replyValue(ValueWrapper value){
-        return KeyValueResponse.KVResponse.newBuilder()
-                .setErrCode(0x0)
-                .setValue(ByteString.copyFrom(value.value))
-                .setVersion(value.version)
-                .build()
-                .toByteString();
-    }
-
-    private ByteString replyNoSuchKey() {
-        return KeyValueResponse.KVResponse.newBuilder()
-                .setErrCode(0x01)
-                .build()
-                .toByteString();
-    }
+//    private DatagramPacket replyMsg(ByteString id, ByteString payload) throws IOException {
+//        //check that response to this incoming packet has not been sent
+//        if(outgoingResponse != null) throw new IllegalStateException();
+//
+//        //prepare checksum
+//        byte[] fullBody = id.concat(payload).toByteArray();
+//        CRC32 crc32 = new CRC32();
+//        crc32.update(fullBody);
+//        long msgChecksum = crc32.getValue();
+//
+//        //prepare message
+//        byte[] msg = Message.Msg.newBuilder()
+//                    .setMessageID(id)
+//                    .setPayload(payload)
+//                    .setCheckSum(msgChecksum)
+//                    .build()
+//                    .toByteArray();
+//
+//        DatagramPacket pkt = new DatagramPacket(msg, msg.length, iPacket.getAddress(), iPacket.getPort());
+//        socket.send(pkt);
+//        outgoingResponse = pkt;
+//        return pkt;
+//    }
 
     //helper functions to process requests
-    private void handleGetMembershipCount(ByteString reqID, UnwrappedPayload payload) throws IOException {
+
+
+    private RequestCacheValue handleGetMembershipCount(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
+            throws IOException {
         if(payload.valueExists || payload.versionExists || payload.keyExists)
         {
-            replyMsg(reqID, replyInvalidOptionalVal());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
-        replyMsg(reqID, replyMembershipCount(1));
+        RequestCacheValue res = scaf
+                .setResponseType(INVALID_OPTIONAL)
+                .setMembershipCount(1)
+                .build();
+        sendResponse(res.generatePacket());
+        return res;
     }
 
-    private void handleGetPID(ByteString reqID, UnwrappedPayload payload) throws IOException {
+    private RequestCacheValue handleGetPID(RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
         if(payload.valueExists || payload.versionExists || payload.keyExists)
         {
-            replyMsg(reqID, replyInvalidOptionalVal());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
         long pid = ProcessHandle.current().pid();
-        replyMsg(reqID, replyPID(pid));
+        RequestCacheValue res = scaf
+                .setResponseType(PID)
+                .setPID(pid)
+                .build();
+        sendResponse(res.generatePacket());
+        return res;
     }
 
-    private void handleIsAlive(ByteString reqID, UnwrappedPayload payload) throws IOException {
+
+    private RequestCacheValue handleIsAlive(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
+            throws IOException {
         if(payload.valueExists || payload.versionExists || payload.keyExists)
         {
-            replyMsg(reqID, replyInvalidOptionalVal());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
-        replyMsg(reqID, replyIsAlive());
+        RequestCacheValue res = scaf.setResponseType(ISALIVE).build();
+        sendResponse(res.generatePacket());
+        return res;
     }
 
-    private void handleShutdown(ByteString reqID, UnwrappedPayload payload) throws IOException {
+
+    private RequestCacheValue handleShutdown (RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
         if(payload.valueExists || payload.versionExists || payload.keyExists)
         {
-            replyMsg(reqID, replyInvalidOptionalVal());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
 
-        replyMsg(reqID, replySuccessOnly());
+        RequestCacheValue res = scaf.setResponseType(SHUTDOWN).build();
+        sendResponse(res.generatePacket());
+
         System.out.println("Recevied shutdown command, shutting down now");
         System.exit(0);
+        return res;
     }
 
-    private void handlePut(ByteString reqID, UnwrappedPayload payload) throws IOException {
+    private RequestCacheValue handlePut(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
+    throws IOException {
         if(!payload.keyExists || !payload.valueExists)
         {
-            replyMsg(reqID, replyInvalidOptionalVal());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
         // no need to check version, since by default it is parsed as 0,
@@ -353,22 +374,37 @@ public class KVServerTaskHandler implements Runnable {
         //defensive design to reject 0 length keys
         if(payload.key.length <= 0)
         {
-            replyMsg(reqID, replyInvalidKeyPayload());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_KEY).build();
+            sendResponse(res.generatePacket());
+            return res;
+        }
+
+
+        //check memory remaining
+        long remainingMemory = Runtime.getRuntime().maxMemory() -
+                (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+
+        //add additional 3000 elem size to deal with non gc'd items hogging up the memory.
+        if (map.size() > 4800 && remainingMemory < MEMORY_SAFETY) {
+            RequestCacheValue res = scaf.setResponseType(NO_MEM).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
         //atomically put and respond, `tis thread safe.
         mapLock.readLock().lock();
         AtomicReference<IOException> ioexception= new AtomicReference<>();
+        AtomicReference<RequestCacheValue> res = new AtomicReference<>();
         map.compute(new KeyWrapper(payload.key), (key, value) -> {
             try {
-                replyMsg(reqID, replySuccessOnly());
+                res.set(scaf.setResponseType(PUT).build());
+                sendResponse(res.get().generatePacket());
                 return new ValueWrapper(payload.value, payload.version);
             } catch (IOException e) {
                 ioexception.set(e);
-                System.err.println(e);
-                System.err.println("Socket exception when returning result of PUT");
-                System.err.println("Reply packet will not be sent");
+                //System.err.println(e);
+                //System.err.println("Socket exception when returning result of PUT");
+                //System.err.println("Reply packet will not be sent");
             }
             return value;
         });
@@ -376,38 +412,47 @@ public class KVServerTaskHandler implements Runnable {
         mapLock.readLock().unlock();
 
         if (ioexception.get() != null) throw ioexception.get();
-    }
 
-    private void handleGet(ByteString reqID, UnwrappedPayload payload) throws IOException {
+        return res.get();
+    }
+    private RequestCacheValue handleGet(RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
         if((!payload.keyExists) || payload.valueExists || payload.versionExists)
         {
-            replyMsg(reqID, replyInvalidOptionalVal());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
         //defensive design to reject 0 length keys
         if(payload.key.length <= 0)
         {
-            replyMsg(reqID, replyInvalidKeyPayload());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_KEY).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
         //atomically get and respond
         mapLock.readLock().lock();
         AtomicReference<IOException> ioexception = new AtomicReference<>();
+        AtomicReference<RequestCacheValue> res = new AtomicReference<>();
         map.compute(new KeyWrapper(payload.key), (key, value) -> {
             try {
                 if (value == null) {
-                    replyMsg(reqID, replyNoSuchKey());
+                    res.set(scaf.setResponseType(NO_KEY).build());
+                    sendResponse(res.get().generatePacket());
                     return value;
                 } else {
-                    replyMsg(reqID, replyValue(value));
+                    res.set(scaf
+                            .setResponseType(VALUE)
+                            .setValue(value)
+                            .build());
+                    sendResponse(res.get().generatePacket());
                     return value;
                 }
             } catch (IOException e) {
-                System.err.println(e);
-                System.err.println("Socket exception when returning result of GET");
-                System.err.println("Reply packet will not be sent");
+                //System.err.println(e);
+                //System.err.println("Socket exception when returning result of GET");
+                //System.err.println("Reply packet will not be sent");
                 ioexception.set(e);
             }
             return value;
@@ -416,38 +461,44 @@ public class KVServerTaskHandler implements Runnable {
 
         if (ioexception.get() != null) throw ioexception.get();
 
+        return res.get();
     }
 
-    private void handleDelete(ByteString reqID, UnwrappedPayload payload) throws IOException {
+    private RequestCacheValue handleDelete(RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
         if((!payload.keyExists) || payload.valueExists || payload.versionExists)
         {
-            replyMsg(reqID, replyInvalidOptionalVal());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
         //defensive design to reject 0 length keys
         if(payload.key.length <= 0)
         {
-            replyMsg(reqID, replyInvalidKeyPayload());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_KEY).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
         //atomically del and respond
         AtomicReference<IOException> ioexception = new AtomicReference<>();
+        AtomicReference<RequestCacheValue> res = new AtomicReference<>();
         mapLock.readLock().lock();
         map.compute(new KeyWrapper(payload.key), (key, value) -> {
             try {
                 if (value == null) {
-                    replyMsg(reqID, replyNoSuchKey());
+                    res.set(scaf.setResponseType(NO_KEY).build());
+                    sendResponse(res.get().generatePacket());
                     return value;
                 } else {
-                    replyMsg(reqID, replySuccessOnly());
+                    res.set(scaf.setResponseType(DEL).build());
+                    sendResponse(res.get().generatePacket());
                     return null;
                 }
             } catch (IOException e) {
-                System.err.println(e);
-                System.err.println("Socket exception when returning result of GET");
-                System.err.println("Reply packet will not be sent");
+                //System.err.println(e);
+                //System.err.println("Socket exception when returning result of GET");
+                //System.err.println("Reply packet will not be sent");
                 ioexception.set(e);
             }
             return value;
@@ -456,20 +507,28 @@ public class KVServerTaskHandler implements Runnable {
         mapLock.readLock().unlock();
         if (ioexception.get() != null) throw ioexception.get();
 
+        return res.get();
     }
 
-    private void handleWipeout(ByteString reqID, UnwrappedPayload payload) throws IOException {
+    private RequestCacheValue handleWipeout(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
+            throws IOException {
         if(payload.valueExists || payload.versionExists || payload.keyExists)
         {
-            replyMsg(reqID, replyInvalidOptionalVal());
-            return;
+            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+            sendResponse(res.generatePacket());
+            return res;
         }
 
         //atomically wipe and respond
         mapLock.writeLock().lock();
         map.clear();
-        replyMsg(reqID, replySuccessOnly());
+        RequestCacheValue res = scaf.setResponseType(WIPEOUT).build();
+        sendResponse(res.generatePacket());
         mapLock.writeLock().unlock();
+
+        System.gc();
+
+        return res;
     }
 
 
