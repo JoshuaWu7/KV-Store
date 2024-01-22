@@ -20,13 +20,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class KVServer
 {
     final static int PORT = 13788;
-    final static int N_THREADS = 16 ; //TODO tune by profiler
+    final static int N_THREADS = 8 ; //TODO tune by profiler
     static final int PACKET_MAX = 16384;
     final static long  CACHE_SZ = 65536;//TODO tune by profiler
     final static long CACHE_EXPIRY = 5;
     final static int CACHE_OVL_WAIT_TIME = 80; // TODO move to requestCacheValue
     final static int THREAD_OVL_WAIT_TIME = 10; // TODO move to requestCacheValue
-    final static int MAP_INIT_SZ = 262_144;
+    final static int MAP_INIT_SZ = 100_000 ;
 
     public static void main( String[] args )
     {
@@ -35,7 +35,7 @@ public class KVServer
         {
             DatagramSocket server = new DatagramSocket(PORT);
             ExecutorService executor = Executors.newFixedThreadPool(N_THREADS); //TODO tune profiler
-            ConcurrentMap<KeyWrapper, ValueWrapper> map = new ConcurrentHashMap<>(8800);
+            ConcurrentMap<KeyWrapper, ValueWrapper> map = new ConcurrentHashMap<>(MAP_INIT_SZ, 0.85F, N_THREADS);
 
             /*
             * Explanation of the mapLock.

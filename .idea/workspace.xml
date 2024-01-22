@@ -5,13 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="dummy tests pass">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/proto/ResponseType.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerTaskHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerTaskHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerThread.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/ValueWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/ValueWrapper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/proto/RequestCacheValue.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/proto/RequestCacheValue.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -32,10 +27,11 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="master" />
+        <entry key="$PROJECT_DIR$" value="main" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="HARD" />
   </component>
   <component name="MacroExpansionManager">
     <option name="directoryName" value="ac4w6ca3" />
@@ -55,34 +51,34 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.KVServer.executor": "Coverage",
-    "Downloaded.Files.Path.Enabled": "false",
-    "Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor": "Run",
-    "Maven.App.executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [install...].executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [install].executor": "Run",
-    "Maven.KVServer.executor": "Run",
-    "Repository.Attach.Annotations": "false",
-    "Repository.Attach.JavaDocs": "false",
-    "Repository.Attach.Sources": "false",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/18chanp1/Documents/cpen431/CPEN431_2024_A4_82033788/src/main",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Libraries",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2",
-    "settings.editor.selected.configurable": "editor.preferences.gutterIcons",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.KVServer.executor&quot;: &quot;Coverage&quot;,
+    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
+    &quot;Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.App.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [install...].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [install].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.KVServer.executor&quot;: &quot;Run&quot;,
+    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/18chanp1/Documents/cpen431/CPEN431_2024_A4_82033788/src/main&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.gutterIcons&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/src/main" />
@@ -137,6 +133,9 @@
       <workItem from="1705464417098" duration="7990000" />
       <workItem from="1705534593755" duration="18333000" />
       <workItem from="1705557648401" duration="49558000" />
+      <workItem from="1705718303801" duration="2219000" />
+      <workItem from="1705773641864" duration="604000" />
+      <workItem from="1705882922707" duration="71000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <option name="closed" value="true" />
@@ -187,7 +186,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="main" />
+                        <option value="origin/main" />
                       </list>
                     </value>
                   </entry>

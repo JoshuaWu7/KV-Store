@@ -255,7 +255,8 @@ public class RequestCacheValue {
 
     public DatagramPacket generatePacket() {
         //prepare checksum
-        byte[] fullBody = reqID.concat(generatePayload()).toByteArray();
+        ByteString payload = this.generatePayload();
+        byte[] fullBody = reqID.concat(payload).toByteArray();
         CRC32 crc32 = new CRC32();
         crc32.update(fullBody);
         long msgChecksum = crc32.getValue();
@@ -263,7 +264,7 @@ public class RequestCacheValue {
         //prepare message
         byte[] msg = Message.Msg.newBuilder()
                 .setMessageID(reqID)
-                .setPayload(this.generatePayload())
+                .setPayload(payload)
                 .setCheckSum(msgChecksum)
                 .build()
                 .toByteArray();
