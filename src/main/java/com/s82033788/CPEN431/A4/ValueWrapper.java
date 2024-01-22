@@ -1,9 +1,11 @@
 package com.s82033788.CPEN431.A4;
 
+import net.openhft.chronicle.bytes.BytesMarshallable;
+
 import java.util.Arrays;
 import java.util.Objects;
 
-public class ValueWrapper {
+public class ValueWrapper implements BytesMarshallable {
     /* TODO Warning, do not mutate*/
     private byte[] value;
     private int version;

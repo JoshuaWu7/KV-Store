@@ -210,26 +210,10 @@ public class RequestCacheValue {
         return pkt;
     }
 
-    public int getErrCode() {
-        return errCode;
-    }
-
     public ValueWrapper getValue() {
         return value;
     }
 
-    public long getPid() {
-        return pid;
-    }
-
-
-    public int getOverloadWaitTime() {
-        return overloadWaitTime;
-    }
-
-    public int getMembershipCount() {
-        return membershipCount;
-    }
 
     public long getIncomingCRC() {
         return incomingCRC;

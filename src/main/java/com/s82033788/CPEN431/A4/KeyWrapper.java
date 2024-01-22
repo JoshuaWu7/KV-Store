@@ -1,8 +1,10 @@
 package com.s82033788.CPEN431.A4;
 
+import net.openhft.chronicle.bytes.BytesMarshallable;
+
 import java.util.Arrays;
 
-public class KeyWrapper {
+public class KeyWrapper implements BytesMarshallable {
     byte[] key;
 
     public KeyWrapper(byte[] key) {

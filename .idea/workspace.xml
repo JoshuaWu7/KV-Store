@@ -4,9 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="dummy tests pass">
+    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="cleaning out commented code">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerTaskHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerTaskHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KeyWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KeyWrapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/ValueWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/ValueWrapper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/proto/RequestCacheValue.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/proto/RequestCacheValue.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -38,6 +42,7 @@
   </component>
   <component name="MavenRunner">
     <option name="delegateBuildToMaven" value="true" />
+    <option name="jreName" value="openjdk-21" />
   </component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
@@ -51,34 +56,34 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.KVServer.executor&quot;: &quot;Coverage&quot;,
-    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
-    &quot;Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.App.executor&quot;: &quot;Run&quot;,
-    &quot;Maven.CPEN431_2024_A4_82033788 [install...].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.CPEN431_2024_A4_82033788 [install].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.KVServer.executor&quot;: &quot;Run&quot;,
-    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
-    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
-    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/18chanp1/Documents/cpen431/CPEN431_2024_A4_82033788/src/main&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.gutterIcons&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.KVServer.executor": "Coverage",
+    "Downloaded.Files.Path.Enabled": "false",
+    "Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor": "Run",
+    "Maven.App.executor": "Run",
+    "Maven.CPEN431_2024_A4_82033788 [install...].executor": "Run",
+    "Maven.CPEN431_2024_A4_82033788 [install].executor": "Run",
+    "Maven.KVServer.executor": "Run",
+    "Repository.Attach.Annotations": "false",
+    "Repository.Attach.JavaDocs": "false",
+    "Repository.Attach.Sources": "false",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/18chanp1/Documents/cpen431/CPEN431_2024_A4_82033788/src/main",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "reference.settings.project.maven.runner",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/src/main" />
@@ -88,11 +93,11 @@
       <recent name="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/proto" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Application.KVServer">
     <configuration name="KVServer" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.s82033788.CPEN431.A4.KVServer" />
       <module name="CPEN431_2024_A4_82033788" />
-      <option name="VM_PARAMETERS" value="-Xmx64m" />
+      <option name="VM_PARAMETERS" value="-Xmx64m --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED --add-opens=jdk.compiler/com.sun.tools.javac=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED" />
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="com.s82033788.CPEN431.A4.*" />
@@ -103,8 +108,57 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="KVServerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="CPEN431_2024_A4_82033788" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.s82033788.CPEN431.A4.tests.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.s82033788.CPEN431.A4.tests" />
+      <option name="MAIN_CLASS_NAME" value="com.s82033788.CPEN431.A4.tests.KVServerTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="KVServerTest.main" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="CPEN431_2024_A4_82033788" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.s82033788.CPEN431.A4.tests.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.s82033788.CPEN431.A4.tests" />
+      <option name="MAIN_CLASS_NAME" value="com.s82033788.CPEN431.A4.tests.KVServerTest" />
+      <option name="METHOD_NAME" value="main" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="java in CPEN431_2024_A4_82033788" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="CPEN431_2024_A4_82033788" />
+      <option name="TEST_OBJECT" value="directory" />
+      <dir value="$PROJECT_DIR$/src/test/java" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="Application.KVServer" />
+      <item itemvalue="JUnit.java in CPEN431_2024_A4_82033788" />
+      <item itemvalue="JUnit.KVServerTest" />
+      <item itemvalue="JUnit.KVServerTest.main" />
+    </list>
     <recent_temporary>
       <list>
+        <item itemvalue="JUnit.java in CPEN431_2024_A4_82033788" />
+        <item itemvalue="JUnit.KVServerTest.main" />
+        <item itemvalue="JUnit.KVServerTest" />
+        <item itemvalue="Application.KVServer" />
         <item itemvalue="Application.KVServer" />
       </list>
     </recent_temporary>
@@ -112,6 +166,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
+        <option value="jdk-17.0.10-corretto-17.0.10-f644763e9732-24582b8d" />
         <option value="jdk-21.0.1-openjdk-21.0.1-f644763e9732-2f79fb23" />
       </set>
     </attachedChunks>
@@ -135,7 +190,10 @@
       <workItem from="1705557648401" duration="49558000" />
       <workItem from="1705718303801" duration="2219000" />
       <workItem from="1705773641864" duration="604000" />
-      <workItem from="1705882922707" duration="71000" />
+      <workItem from="1705882922707" duration="2077000" />
+      <workItem from="1705885012703" duration="5858000" />
+      <workItem from="1705898181800" duration="9829000" />
+      <workItem from="1705909362157" duration="985000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <option name="closed" value="true" />
@@ -169,7 +227,23 @@
       <option name="project" value="LOCAL" />
       <updated>1705545497541</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="minor optimizations">
+      <option name="closed" value="true" />
+      <created>1705883082719</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1705883082719</updated>
+    </task>
+    <task id="LOCAL-00006" summary="cleaning out commented code">
+      <option name="closed" value="true" />
+      <created>1705883214032</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1705883214032</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -202,7 +276,9 @@
     <MESSAGE value="initial commit" />
     <MESSAGE value="get some basic logic done" />
     <MESSAGE value="dummy tests pass" />
-    <option name="LAST_COMMIT_MESSAGE" value="dummy tests pass" />
+    <MESSAGE value="minor optimizations" />
+    <MESSAGE value="cleaning out commented code" />
+    <option name="LAST_COMMIT_MESSAGE" value="cleaning out commented code" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -211,6 +287,18 @@
           <properties class="java.lang.ClassCastException" package="java.lang" />
           <option name="timeStamp" value="2" />
         </breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <condition expression="version != 0" language="JAVA" />
+          <url>file://$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/ValueWrapper.java</url>
+          <line>11</line>
+          <option name="timeStamp" value="20" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <condition expression="version != 0" language="JAVA" />
+          <url>file://$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/ValueWrapper.java</url>
+          <line>14</line>
+          <option name="timeStamp" value="21" />
+        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>

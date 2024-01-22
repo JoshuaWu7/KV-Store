@@ -4,13 +4,17 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.s82033788.CPEN431.A4.proto.RequestCacheKey;
 import com.s82033788.CPEN431.A4.proto.RequestCacheValue;
+import net.openhft.chronicle.map.ChronicleMap;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -33,9 +37,18 @@ public class KVServer
 
         try
         {
+            //TODO get rid of magic numbers
             DatagramSocket server = new DatagramSocket(PORT);
-            ExecutorService executor = Executors.newFixedThreadPool(N_THREADS); //TODO tune profiler
-            ConcurrentMap<KeyWrapper, ValueWrapper> map = new ConcurrentHashMap<>(MAP_INIT_SZ, 0.85F, N_THREADS);
+            ExecutorService executor = Executors.newCachedThreadPool(); //TODO tune profiler
+
+            ConcurrentMap<KeyWrapper, ValueWrapper> map
+                    = ChronicleMap
+                    .of(KeyWrapper.class, ValueWrapper.class)
+                    .name("KVStore")
+                    .averageKeySize(32)
+                    .entries(146_800)
+                    .averageValueSize(500)
+                    .create();
 
             /*
             * Explanation of the mapLock.
@@ -50,6 +63,8 @@ public class KVServer
             * Used only by handleWipeout
             *
             * */
+            AtomicInteger bytesUsed = new AtomicInteger(0);
+            Lock bytesUsedLock = new ReentrantLock();
             ReadWriteLock mapLock = new ReentrantReadWriteLock();
             byte[] iBuf = new byte[PACKET_MAX];
             Cache<RequestCacheKey, RequestCacheValue> requestCache = CacheBuilder.newBuilder()
@@ -71,7 +86,9 @@ public class KVServer
                         requestCache,
                         map,
                         mapLock,
-                        tpe));
+                        tpe,
+                        bytesUsed,
+                        bytesUsedLock));
 
             }
 

@@ -3,40 +3,43 @@ package com.s82033788.CPEN431.A4;
 import com.google.common.cache.Cache;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.s82033788.CPEN431.A4.proto.*;
+import com.s82033788.CPEN431.A4.proto.KeyValueRequest;
+import com.s82033788.CPEN431.A4.proto.Message;
+import com.s82033788.CPEN431.A4.proto.RequestCacheKey;
+import com.s82033788.CPEN431.A4.proto.RequestCacheValue;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.util.Arrays;
+import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.zip.CRC32;
 
 import static com.s82033788.CPEN431.A4.proto.ResponseType.*;
 
 public class KVServerTaskHandler implements Runnable {
+    private AtomicInteger bytesUsed;
+    private Lock bytesUsedLock;
     DatagramPacket iPacket;
     DatagramSocket socket;
     Cache<RequestCacheKey, RequestCacheValue> requestCache;
     ConcurrentMap<KeyWrapper, ValueWrapper> map;
     ReadWriteLock mapLock;
     ThreadPoolExecutor tpe; //this is concurrently inconsequential, they can just try again later.
-    //DatagramPacket outgoingResponse;
     boolean responseSent = false;
 
     // Constants
     final static int KEY_MAX_LEN = 32;
     final static int VALUE_MAX_LEN = 10_000;
     final static int MEMORY_SAFETY = 524_288;
-
     public final static int RES_CODE_INVALID_KEY = 0x6;
-
     public final static int RES_CODE_INVALID_VALUE = 0x7;
-
     public final static int RES_CODE_INVALID_OPCODE = 0x5;
     public final static int RES_CODE_SUCCESS = 0x0;
     public final static int RES_CODE_INVALID_OPTIONAL = 0x21;
@@ -53,22 +56,24 @@ public class KVServerTaskHandler implements Runnable {
     public KVServerTaskHandler(DatagramPacket iPacket,
                                DatagramSocket socket,
                                Cache<RequestCacheKey, RequestCacheValue> requestCache,
-                               ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock mapLock,
-                               ThreadPoolExecutor tpe) {
+                               ConcurrentMap<KeyWrapper, ValueWrapper> map,
+                               ReadWriteLock mapLock,
+                               ThreadPoolExecutor tpe,
+                               AtomicInteger bytesUsed,
+                               Lock bytesUsedLock) {
         this.iPacket = iPacket;
         this.socket = socket;
         this.requestCache = requestCache;
         this.map = map;
         this.mapLock = mapLock;
         this.tpe = tpe;
+        this.bytesUsed = bytesUsed;
+        this.bytesUsedLock = bytesUsedLock;
     }
 
 
     @Override
     public void run() {
-        //TODO perform memory and cache runtime checks
-
-        //cache might have data race, be alert.
         if (responseSent) throw new IllegalStateException();
 
         //decode the message
@@ -178,13 +183,19 @@ public class KVServerTaskHandler implements Runnable {
             sendResponse(res.generatePacket());
             return res;
         }
-////
-//        if(tpe.getActiveCount() - 1 >= tpe.getMaximumPoolSize())
-//        {
-//            DatagramPacket responsePacket;
-//            responsePacket = replyMsg(unwrappedMessage.reqID, replyOverloadThreads());
-//            return new RequestCacheValue(responsePacket, unwrappedMessage.crc);
-//        }
+
+        if(tpe.getPoolSize() > 64)
+        {
+            System.out.println("Cache overflow. Delay Requested");
+            RequestCacheValue res = new RequestCacheValue.Builder(unwrappedMessage.crc,
+                    iPacket.getAddress(),
+                    iPacket.getPort(),
+                    unwrappedMessage.reqID)
+                    .setResponseType(OVERLOAD_THREAD)
+                    .build();
+
+            sendResponse(res.generatePacket());
+        }
 
         //process the packet by request code
         ByteString reqID = unwrappedMessage.reqID;
@@ -218,9 +229,10 @@ public class KVServerTaskHandler implements Runnable {
         ByteString payload;
         ByteString messageID;
 
-
-        byte[] trimmedMsg = Arrays.copyOf(iPacket.getData(), iPacket.getLength());
-        Message.Msg deserialized = Message.Msg.parseFrom(trimmedMsg);
+        ByteBuffer b = ByteBuffer.wrap(iPacket.getData());
+        b.limit(iPacket.getLength());
+        Message.Msg deserialized = Message.Msg.parseFrom(b);
+        b.rewind();
         expectedCRC = deserialized.getCheckSum();
         payload = deserialized.getPayload();
         messageID = deserialized.getMessageID();
@@ -365,6 +377,16 @@ public class KVServerTaskHandler implements Runnable {
             return res;
         }
 
+        bytesUsedLock.lock();
+
+        if(bytesUsed.get() >= 60_817_408) {
+            RequestCacheValue res = scaf.setResponseType(NO_MEM).build();
+            sendResponse(res.generatePacket());
+            bytesUsedLock.unlock();
+            return res;
+        }
+
+
         //atomically put and respond, `tis thread safe.
         mapLock.readLock().lock();
         AtomicReference<IOException> ioexception= new AtomicReference<>();
@@ -373,6 +395,7 @@ public class KVServerTaskHandler implements Runnable {
             try {
                 res.set(scaf.setResponseType(PUT).build());
                 sendResponse(res.get().generatePacket());
+                bytesUsed.addAndGet(payload.value.length);
                 return new ValueWrapper(payload.value, payload.version);
             } catch (IOException e) {
                 ioexception.set(e);
@@ -383,6 +406,7 @@ public class KVServerTaskHandler implements Runnable {
             return value;
         });
 
+        bytesUsedLock.unlock();
         mapLock.readLock().unlock();
 
         if (ioexception.get() != null) throw ioexception.get();
@@ -458,6 +482,7 @@ public class KVServerTaskHandler implements Runnable {
         AtomicReference<IOException> ioexception = new AtomicReference<>();
         AtomicReference<RequestCacheValue> res = new AtomicReference<>();
         mapLock.readLock().lock();
+        bytesUsedLock.lock();
         map.compute(new KeyWrapper(payload.key), (key, value) -> {
             try {
                 if (value == null) {
@@ -465,6 +490,7 @@ public class KVServerTaskHandler implements Runnable {
                     sendResponse(res.get().generatePacket());
                     return value;
                 } else {
+                    bytesUsed.addAndGet(-value.getValue().length);
                     res.set(scaf.setResponseType(DEL).build());
                     sendResponse(res.get().generatePacket());
                     return null;
@@ -478,6 +504,7 @@ public class KVServerTaskHandler implements Runnable {
             return value;
         });
 
+        bytesUsedLock.unlock();
         mapLock.readLock().unlock();
         if (ioexception.get() != null) throw ioexception.get();
 
@@ -495,7 +522,10 @@ public class KVServerTaskHandler implements Runnable {
 
         //atomically wipe and respond
         mapLock.writeLock().lock();
+        bytesUsedLock.lock();
         map.clear();
+        bytesUsed.set(0);
+        bytesUsedLock.unlock();
         RequestCacheValue res = scaf.setResponseType(WIPEOUT).build();
         sendResponse(res.generatePacket());
         mapLock.writeLock().unlock();
