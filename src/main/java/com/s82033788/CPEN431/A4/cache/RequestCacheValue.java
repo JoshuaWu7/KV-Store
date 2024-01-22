@@ -1,24 +1,26 @@
-package com.s82033788.CPEN431.A4.proto;
+package com.s82033788.CPEN431.A4.cache;
 
 import com.google.protobuf.ByteString;
 import com.s82033788.CPEN431.A4.KVServerTaskHandler;
-import com.s82033788.CPEN431.A4.ValueWrapper;
+import com.s82033788.CPEN431.A4.map.ValueWrapper;
+import com.s82033788.CPEN431.A4.proto.KeyValueResponse;
+import com.s82033788.CPEN431.A4.proto.Message;
 
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.util.zip.CRC32;
 
 public class RequestCacheValue {
-    private ResponseType responseType;
-    private int errCode;
+    private final ResponseType responseType;
+    private final int errCode;
     private ValueWrapper value;
     private long pid;
     private int overloadWaitTime;
     private int membershipCount;
-    private ByteString reqID;
-    private long incomingCRC;
-    private InetAddress address;
-    private int port;
+    private final ByteString reqID;
+    private final long incomingCRC;
+    private final InetAddress address;
+    private final int port;
 
     private RequestCacheValue(Builder builder) {
         ResponseType type = builder.b_type;
@@ -96,10 +98,10 @@ public class RequestCacheValue {
         private long b_pid;
         private boolean b_pid_set = false;
         private ValueWrapper b_value;
-        private long b_incomingCRC;
-        private InetAddress b_address;
-        private int b_port;
-        private ByteString b_reqID;
+        private final long b_incomingCRC;
+        private final InetAddress b_address;
+        private final int b_port;
+        private final ByteString b_reqID;
 
         public Builder(long incomingCRC, InetAddress adr, int port, ByteString req_id) {
             this.b_incomingCRC = incomingCRC;
@@ -206,12 +208,7 @@ public class RequestCacheValue {
                 .build()
                 .toByteArray();
 
-        DatagramPacket pkt = new DatagramPacket(msg, msg.length, address, port);
-        return pkt;
-    }
-
-    public ValueWrapper getValue() {
-        return value;
+        return new DatagramPacket(msg, msg.length, address, port);
     }
 
 

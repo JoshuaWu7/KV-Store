@@ -2,8 +2,10 @@ package com.s82033788.CPEN431.A4;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.s82033788.CPEN431.A4.proto.RequestCacheKey;
-import com.s82033788.CPEN431.A4.proto.RequestCacheValue;
+import com.s82033788.CPEN431.A4.cache.RequestCacheKey;
+import com.s82033788.CPEN431.A4.cache.RequestCacheValue;
+import com.s82033788.CPEN431.A4.map.KeyWrapper;
+import com.s82033788.CPEN431.A4.map.ValueWrapper;
 import net.openhft.chronicle.map.ChronicleMap;
 
 import java.io.IOException;
@@ -28,9 +30,6 @@ public class KVServer
     static final int PACKET_MAX = 16384;
     final static long  CACHE_SZ = 65536;//TODO tune by profiler
     final static long CACHE_EXPIRY = 5;
-    final static int CACHE_OVL_WAIT_TIME = 80; // TODO move to requestCacheValue
-    final static int THREAD_OVL_WAIT_TIME = 10; // TODO move to requestCacheValue
-    final static int MAP_INIT_SZ = 100_000 ;
 
     public static void main( String[] args )
     {
@@ -67,7 +66,7 @@ public class KVServer
             Lock bytesUsedLock = new ReentrantLock();
             ReadWriteLock mapLock = new ReentrantReadWriteLock();
             byte[] iBuf = new byte[PACKET_MAX];
-            Cache<RequestCacheKey, RequestCacheValue> requestCache = CacheBuilder.newBuilder()
+            @SuppressWarnings("UnstableApiUsage") Cache<RequestCacheKey, RequestCacheValue> requestCache = CacheBuilder.newBuilder()
                     .expireAfterWrite(CACHE_EXPIRY, TimeUnit.SECONDS)
                     //.maximumSize(131072)
                     .build();

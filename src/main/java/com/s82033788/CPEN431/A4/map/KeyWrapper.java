@@ -1,4 +1,4 @@
-package com.s82033788.CPEN431.A4;
+package com.s82033788.CPEN431.A4.map;
 
 import net.openhft.chronicle.bytes.BytesMarshallable;
 

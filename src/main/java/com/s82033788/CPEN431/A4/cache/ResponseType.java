@@ -1,4 +1,4 @@
-package com.s82033788.CPEN431.A4.proto;
+package com.s82033788.CPEN431.A4.cache;
 
 public enum ResponseType {
     INVALID_KEY,
