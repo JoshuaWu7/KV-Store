@@ -263,32 +263,6 @@ public class KVServerTaskHandler implements Runnable {
         socket.send(d);
     }
 
-
-    //helper function to send a packet given payload and id. Mutates outgoingResponse
-//    private DatagramPacket replyMsg(ByteString id, ByteString payload) throws IOException {
-//        //check that response to this incoming packet has not been sent
-//        if(outgoingResponse != null) throw new IllegalStateException();
-//
-//        //prepare checksum
-//        byte[] fullBody = id.concat(payload).toByteArray();
-//        CRC32 crc32 = new CRC32();
-//        crc32.update(fullBody);
-//        long msgChecksum = crc32.getValue();
-//
-//        //prepare message
-//        byte[] msg = Message.Msg.newBuilder()
-//                    .setMessageID(id)
-//                    .setPayload(payload)
-//                    .setCheckSum(msgChecksum)
-//                    .build()
-//                    .toByteArray();
-//
-//        DatagramPacket pkt = new DatagramPacket(msg, msg.length, iPacket.getAddress(), iPacket.getPort());
-//        socket.send(pkt);
-//        outgoingResponse = pkt;
-//        return pkt;
-//    }
-
     //helper functions to process requests
 
 

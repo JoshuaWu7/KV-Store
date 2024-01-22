@@ -9,12 +9,10 @@ import java.net.InetAddress;
 import java.util.zip.CRC32;
 
 public class RequestCacheValue {
-    public DatagramPacket result;
     private ResponseType responseType;
     private int errCode;
     private ValueWrapper value;
     private long pid;
-    private int version;
     private int overloadWaitTime;
     private int membershipCount;
     private ByteString reqID;
@@ -143,67 +141,6 @@ public class RequestCacheValue {
 
     }
 
-
-
-//    public RequestCacheValue(ResponseType type) {
-//        switch (type) {
-//            case INVALID_KEY:       this.errCode = KVServerTaskHandler.RES_CODE_INVALID_KEY;        break;
-//            case INVALID_VALUE:     this.errCode = KVServerTaskHandler.RES_CODE_INVALID_VALUE;      break;
-//            case INVALID_OPCODE:    this.errCode = KVServerTaskHandler.RES_CODE_INVALID_OPCODE;     break;
-//            case ISALIVE:           this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;            break;
-//            case SHUTDOWN:          this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;            break;
-//            case PUT:               this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;            break;
-//            case DEL:               this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;            break;
-//            case WIPEOUT:           this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;            break;
-//            case INVALID_OPTIONAL:  this.errCode = KVServerTaskHandler.RES_CODE_INVALID_OPTIONAL;   break;
-//            case RETRY_NOT_EQUAL:   this.errCode = KVServerTaskHandler.RES_CODE_RETRY_NOT_EQUAL;    break;
-//            case NO_KEY:            this.errCode = KVServerTaskHandler.RES_CODE_NO_KEY;             break;
-//            case NO_MEM:            this.errCode = KVServerTaskHandler.RES_CODE_NO_MEM;             break;
-//            case OVERLOAD_CACHE:
-//            {
-//                this.errCode = KVServerTaskHandler.RES_CODE_OVERLOAD;
-//                this.overloadWaitTime = KVServerTaskHandler.CACHE_OVL_WAIT_TIME;
-//                break;
-//            }
-//            case OVERLOAD_THREAD:
-//            {
-//                this.errCode = KVServerTaskHandler.RES_CODE_OVERLOAD;
-//                this.overloadWaitTime = KVServerTaskHandler.THREAD_OVL_WAIT_TIME;
-//                break;
-//            }
-//            default: throw new IllegalArgumentException();
-//        }
-//        this.responseType = type;
-//    }
-
-
-//    public RequestCacheValue(ResponseType type, int membershipCount)
-//    {
-//        if(type != ResponseType.MEMBERSHIP_COUNT) throw new IllegalArgumentException();
-//
-//        this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;
-//        this.membershipCount = membershipCount;
-//        this.responseType = type;
-//    }
-
-//    public RequestCacheValue(ResponseType type, long pid)
-//    {
-//        if (type != ResponseType.PID) throw new IllegalArgumentException();
-//
-//        this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;
-//        this.pid = pid;
-//        this.responseType = type;
-//    }
-
-//    public RequestCacheValue(ResponseType type, ValueWrapper value) {
-//        if(type != ResponseType.VALUE) throw new IllegalArgumentException();
-//
-//        this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;
-//        this.value = value;
-//        this.version = value.getVersion();
-//        this.responseType = type;
-//    }
-
     public ByteString generatePayload()
     {
         switch (this.responseType) {
@@ -272,10 +209,6 @@ public class RequestCacheValue {
         DatagramPacket pkt = new DatagramPacket(msg, msg.length, address, port);
         return pkt;
     }
-//    public RequestCacheValue(DatagramPacket result, long incomingCRC) {
-//        this.result = result;
-//        this.incomingCRC = incomingCRC;
-//    }
 
     public int getErrCode() {
         return errCode;
@@ -289,9 +222,6 @@ public class RequestCacheValue {
         return pid;
     }
 
-    public int getVersion() {
-        return version;
-    }
 
     public int getOverloadWaitTime() {
         return overloadWaitTime;
