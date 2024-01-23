@@ -4,10 +4,10 @@ import com.google.protobuf.ByteString;
 
 public class UnwrappedMessage {
     private ByteString reqID;
-    private ByteString payload;
+    private PublicBuffer payload;
     private long crc;
 
-    public UnwrappedMessage(ByteString reqID, ByteString payload, long crc) {
+    public UnwrappedMessage(ByteString reqID,  PublicBuffer payload, long crc) {
         this.setReqID(reqID);
         this.setPayload(payload);
         this.setCrc(crc);
@@ -21,11 +21,11 @@ public class UnwrappedMessage {
         this.reqID = reqID;
     }
 
-    public ByteString getPayload() {
+    public PublicBuffer getPayload() {
         return payload;
     }
 
-    public void setPayload(ByteString payload) {
+    public void setPayload(PublicBuffer payload) {
         this.payload = payload;
     }
 

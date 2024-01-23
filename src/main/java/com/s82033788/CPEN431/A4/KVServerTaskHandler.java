@@ -2,13 +2,14 @@ package com.s82033788.CPEN431.A4;
 
 import com.google.common.cache.Cache;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.s82033788.CPEN431.A4.map.KeyWrapper;
-import com.s82033788.CPEN431.A4.map.ValueWrapper;
-import com.s82033788.CPEN431.A4.proto.KeyValueRequest;
-import com.s82033788.CPEN431.A4.proto.Message;
 import com.s82033788.CPEN431.A4.cache.RequestCacheKey;
 import com.s82033788.CPEN431.A4.cache.RequestCacheValue;
+import com.s82033788.CPEN431.A4.map.KeyWrapper;
+import com.s82033788.CPEN431.A4.map.ValueWrapper;
+import com.s82033788.CPEN431.A4.proto.KeyValueRequest.KVRequest;
+import com.s82033788.CPEN431.A4.proto.Message.Msg;
+import com.s82033788.CPEN431.A4.wrappers.PB_ContentType;
+import com.s82033788.CPEN431.A4.wrappers.PublicBuffer;
 import com.s82033788.CPEN431.A4.wrappers.UnwrappedMessage;
 import com.s82033788.CPEN431.A4.wrappers.UnwrappedPayload;
 
@@ -38,6 +39,9 @@ public class KVServerTaskHandler implements Runnable {
     //this is concurrently inconsequential, they can just try again later.
     ThreadPoolExecutor tpe;
     boolean responseSent = false;
+    PublicBuffer incomingPublicBuffer;
+
+    PublicBuffer outgoingPublicBuffer;
 
     // Constants
     final static int KEY_MAX_LEN = 32;
@@ -85,7 +89,7 @@ public class KVServerTaskHandler implements Runnable {
         UnwrappedMessage unwrappedMessage;
         try {
             unwrappedMessage = unpackPacket(iPacket);
-        } catch (InvalidProtocolBufferException e) {
+        } catch (IOException e) {
             //System.err.println("Packet does not match .proto");
             //System.err.println(e);
             //System.err.println("Stopping packet handling and returning");
@@ -227,44 +231,56 @@ public class KVServerTaskHandler implements Runnable {
 
     //helper function to unpack packet
     private UnwrappedMessage unpackPacket(DatagramPacket iPacket)
-            throws InvalidProtocolBufferException, InvalidChecksumException {
+            throws IOException, InvalidChecksumException {
         long expectedCRC;
-        ByteString payload;
-        ByteString messageID;
 
-        ByteBuffer b = ByteBuffer.wrap(iPacket.getData());
-        b.limit(iPacket.getLength());
-        Message.Msg deserialized = Message.Msg.parseFrom(b);
-        b.rewind();
+        incomingPublicBuffer = new PublicBuffer(iPacket.getData(), PB_ContentType.PACKET, iPacket.getLength());
+
+        Msg deserialized = Msg.parseFrom(incomingPublicBuffer.readPacketFromPB());
         expectedCRC = deserialized.getCheckSum();
-        payload = deserialized.getPayload();
-        messageID = deserialized.getMessageID();
+        ByteString messageID = deserialized.getMessageID();
+
+        //into the public buffer (for big things)
+        deserialized.getMessageID().writeTo(incomingPublicBuffer.writeIDToPB());
+        deserialized.getPayload().writeTo(incomingPublicBuffer.writePayloadToPB());
+
+
+        byte[] actualBody = messageID.concat(deserialized.getPayload()).toByteArray();
+
+
+
 
         //verify checksum
-        byte[] allBody = messageID.concat(payload).toByteArray();
+        ByteBuffer allBody = incomingPublicBuffer.borrowBodyForCRCFromPB();
         CRC32 crc32 = new CRC32();
         crc32.update(allBody);
         long actualCRC = crc32.getValue();
+
+        //fulfil return body to PB promise.
+        crc32 = null;
+        allBody = null;
+        incomingPublicBuffer.returnBodyToPB();
+
         if (actualCRC != expectedCRC) throw new InvalidChecksumException();
 
-        return new UnwrappedMessage(messageID, payload, actualCRC);
+        return new UnwrappedMessage(messageID, incomingPublicBuffer, actualCRC);
     }
 
     // helper function to unpack payload
-    private UnwrappedPayload unpackPayload(ByteString payload) throws
-            InvalidProtocolBufferException, KeyLengthException, ValueLengthException {
-        KeyValueRequest.KVRequest deserialized = KeyValueRequest.KVRequest.parseFrom(payload);
+    private UnwrappedPayload unpackPayload(PublicBuffer payload) throws
+            IOException, KeyLengthException, ValueLengthException {
+        KVRequest deserialized = KVRequest.parseFrom(payload.readPayloadFromPB());
         int command = deserialized.getCommand();
         byte[] key = deserialized.getKey().toByteArray();
-        byte[] value = deserialized.getValue().toByteArray();
+        deserialized.getValue().writeTo(incomingPublicBuffer.writeValueToPB());
         int version = deserialized.getVersion();
 
         if(key.length > KEY_MAX_LEN) throw new KeyLengthException();
-        if(value.length > VALUE_MAX_LEN) throw new ValueLengthException();
+        if(incomingPublicBuffer.getLen() > VALUE_MAX_LEN) throw new ValueLengthException();
 
         return new UnwrappedPayload(command,
                 key,
-                value,
+                incomingPublicBuffer.getValueCopy(),
                 version,
                 deserialized.hasKey(),
                 deserialized.hasValue(),
@@ -440,16 +456,14 @@ public class KVServerTaskHandler implements Runnable {
             try {
                 if (value == null) {
                     res.set(scaf.setResponseType(NO_KEY).build());
-                    sendResponse(res.get().generatePacket());
-                    return value;
                 } else {
                     res.set(scaf
                             .setResponseType(VALUE)
                             .setValue(value)
                             .build());
-                    sendResponse(res.get().generatePacket());
-                    return value;
                 }
+                sendResponse(res.get().generatePacket());
+                return value;
             } catch (IOException e) {
                 //System.err.println(e);
                 //System.err.println("Socket exception when returning result of GET");

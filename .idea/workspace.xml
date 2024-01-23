@@ -1,20 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AnalysisUIOptions">
+    <option name="SPLITTER_PROPORTION" value="0.22723736" />
+    <option name="ANALYZE_INJECTED_CODE" value="false" />
+    <option name="SCOPE_TYPE" value="8" />
+    <option name="CUSTOM_SCOPE_NAME" value="WrittenCode" />
+  </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="small refactoring">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/PB_ContentType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/PublicBuffer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerTaskHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerTaskHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KeyWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/map/KeyWrapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/UnwrappedMessage.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/UnwrappedMessage.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/UnwrappedPayload.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/UnwrappedPayload.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/ValueWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/map/ValueWrapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/proto/RequestCacheKey.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/cache/RequestCacheKey.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/proto/RequestCacheValue.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/cache/RequestCacheValue.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/proto/ResponseType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/cache/ResponseType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/map/ValueWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/map/ValueWrapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/UnwrappedMessage.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/UnwrappedMessage.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/UnwrappedPayload.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/UnwrappedPayload.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,8 +51,11 @@
     <option name="delegateBuildToMaven" value="true" />
     <option name="jreName" value="openjdk-21" />
   </component>
+  <component name="NamedScopeManager">
+    <scope name="WrittenCode" pattern="(src:com.s82033788.CPEN431.A4..*||src:com.s82033788.CPEN431.A4.cache..*||src:com.s82033788.CPEN431.A4.map..*||src:com.s82033788.CPEN431.A4.wrappers..*)&amp;&amp;!src:com.s82033788.CPEN431.A4.proto..*" />
+  </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="ProjectErrors" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 2
@@ -67,7 +74,7 @@
     "Maven.App.executor": "Run",
     "Maven.CPEN431_2024_A4_82033788 [install...].executor": "Run",
     "Maven.CPEN431_2024_A4_82033788 [install].executor": "Run",
-    "Maven.KVServer.executor": "Run",
+    "Maven.KVServer.executor": "Profiler#1",
     "Repository.Attach.Annotations": "false",
     "Repository.Attach.JavaDocs": "false",
     "Repository.Attach.Sources": "false",
@@ -198,7 +205,7 @@
       <workItem from="1705885012703" duration="5858000" />
       <workItem from="1705898181800" duration="9829000" />
       <workItem from="1705909362157" duration="1050000" />
-      <workItem from="1705950673566" duration="1103000" />
+      <workItem from="1705950673566" duration="33658000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <option name="closed" value="true" />
@@ -256,7 +263,15 @@
       <option name="project" value="LOCAL" />
       <updated>1705910402667</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="small refactoring">
+      <option name="closed" value="true" />
+      <created>1705952085944</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1705952085944</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -298,21 +313,27 @@
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
-        <breakpoint enabled="true" type="java-exception">
-          <properties class="java.lang.ClassCastException" package="java.lang" />
-          <option name="timeStamp" value="2" />
-        </breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <condition expression="version != 0" language="JAVA" />
-          <url>file://$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/map/ValueWrapper.java</url>
-          <line>11</line>
-          <option name="timeStamp" value="20" />
+          <condition expression="iPacket.length &gt; 10000" language="JAVA" />
+          <url>file://$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerTaskHandler.java</url>
+          <line>277</line>
+          <option name="timeStamp" value="64" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <condition expression="version != 0" language="JAVA" />
-          <url>file://$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/map/ValueWrapper.java</url>
-          <line>14</line>
-          <option name="timeStamp" value="21" />
+          <condition expression="iPacket.length &gt; 10000" language="JAVA" />
+          <url>file://$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerTaskHandler.java</url>
+          <line>273</line>
+          <option name="timeStamp" value="65" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/PublicBuffer.java</url>
+          <line>114</line>
+          <option name="timeStamp" value="67" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/PublicBuffer.java</url>
+          <line>142</line>
+          <option name="timeStamp" value="68" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
