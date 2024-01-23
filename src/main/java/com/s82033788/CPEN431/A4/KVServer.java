@@ -51,8 +51,8 @@ public class KVServer
             *
             * */
             ReadWriteLock mapLock = new ReentrantReadWriteLock();
-            byte[] iBuf = new byte[PACKET_MAX];
-            Cache<RequestCacheKey, RequestCacheValue> requestCache = CacheBuilder.newBuilder()
+            byte[] iBuf;
+            @SuppressWarnings("UnstableApiUsage") Cache<RequestCacheKey, RequestCacheValue> requestCache = CacheBuilder.newBuilder()
                     .expireAfterWrite(CACHE_EXPIRY, TimeUnit.SECONDS)
                     //.maximumSize(131072)
                     .build();
@@ -60,6 +60,7 @@ public class KVServer
 
 
             while(true){
+                iBuf = new byte[PACKET_MAX];
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
                 server.receive(iPacket);
 
