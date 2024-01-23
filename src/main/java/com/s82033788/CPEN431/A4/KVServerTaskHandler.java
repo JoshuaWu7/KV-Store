@@ -122,7 +122,8 @@ public class KVServerTaskHandler implements Runnable {
                         unwrappedMessage.getCrc(),
                         iPacket.getAddress(),
                         iPacket.getPort(),
-                        unwrappedMessage.getReqID())
+                        unwrappedMessage.getReqID(),
+                        incomingPublicBuffer)
                         .setResponseType(RETRY_NOT_EQUAL)
                         .build();
 
@@ -155,7 +156,8 @@ public class KVServerTaskHandler implements Runnable {
                 unwrappedMessage.getCrc(),
                 iPacket.getAddress(),
                 iPacket.getPort(),
-                unwrappedMessage.getReqID());
+                unwrappedMessage.getReqID(),
+                incomingPublicBuffer);
 
         try {
             payload = unpackPayload(unwrappedMessage.getPayload());
@@ -184,7 +186,8 @@ public class KVServerTaskHandler implements Runnable {
             RequestCacheValue res = new RequestCacheValue.Builder(unwrappedMessage.getCrc(),
                     iPacket.getAddress(),
                     iPacket.getPort(),
-                    unwrappedMessage.getReqID())
+                    unwrappedMessage.getReqID(),
+                    incomingPublicBuffer)
                     .setResponseType(OVERLOAD_CACHE)
                     .build();
 
@@ -198,7 +201,8 @@ public class KVServerTaskHandler implements Runnable {
             RequestCacheValue res = new RequestCacheValue.Builder(unwrappedMessage.getCrc(),
                     iPacket.getAddress(),
                     iPacket.getPort(),
-                    unwrappedMessage.getReqID())
+                    unwrappedMessage.getReqID(),
+                    incomingPublicBuffer)
                     .setResponseType(OVERLOAD_THREAD)
                     .build();
 

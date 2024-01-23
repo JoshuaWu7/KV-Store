@@ -5,6 +5,7 @@ import com.s82033788.CPEN431.A4.KVServerTaskHandler;
 import com.s82033788.CPEN431.A4.map.ValueWrapper;
 import com.s82033788.CPEN431.A4.proto.KeyValueResponse;
 import com.s82033788.CPEN431.A4.proto.Message;
+import com.s82033788.CPEN431.A4.wrappers.PublicBuffer;
 
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -21,6 +22,7 @@ public class RequestCacheValue {
     private final long incomingCRC;
     private final InetAddress address;
     private final int port;
+    private final PublicBuffer pb;
 
     private RequestCacheValue(Builder builder) {
         ResponseType type = builder.b_type;
@@ -32,6 +34,7 @@ public class RequestCacheValue {
         this.port = builder.b_port;
         this.reqID = builder.b_reqID;
         this.incomingCRC = builder.b_incomingCRC;
+        this.pb = builder.b_pb;
 
         switch (type) {
             case INVALID_KEY:       this.errCode = KVServerTaskHandler.RES_CODE_INVALID_KEY;        break;
@@ -102,12 +105,14 @@ public class RequestCacheValue {
         private final InetAddress b_address;
         private final int b_port;
         private final ByteString b_reqID;
+        private final PublicBuffer b_pb;
 
-        public Builder(long incomingCRC, InetAddress adr, int port, ByteString req_id) {
+        public Builder(long incomingCRC, InetAddress adr, int port, ByteString req_id, PublicBuffer pb) {
             this.b_incomingCRC = incomingCRC;
             this.b_address = adr;
             this.b_port = port;
             this.b_reqID = req_id;
+            this.b_pb = pb;
         }
 
         public Builder setResponseType(ResponseType type) {
