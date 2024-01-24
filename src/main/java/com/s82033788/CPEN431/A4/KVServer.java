@@ -72,13 +72,14 @@ public class KVServer
                     .build();
 
 
-
             while(true){
                 iBuf = new byte[PACKET_MAX];
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
                 server.receive(iPacket);
 
                 ThreadPoolExecutor tpe = (ThreadPoolExecutor) executor;
+
+
 
                 executor.execute(new KVServerTaskHandler(
                         iPacket,

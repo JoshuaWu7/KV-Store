@@ -3,13 +3,13 @@ package com.s82033788.CPEN431.A4.cache;
 import com.google.protobuf.ByteString;
 import com.s82033788.CPEN431.A4.KVServerTaskHandler;
 import com.s82033788.CPEN431.A4.map.ValueWrapper;
-import com.s82033788.CPEN431.A4.proto.KeyValueResponse;
-import com.s82033788.CPEN431.A4.proto.Message;
+import com.s82033788.CPEN431.A4.proto.KeyValueResponse.KVResponse;
+import com.s82033788.CPEN431.A4.proto.Message.Msg;
 import com.s82033788.CPEN431.A4.wrappers.PublicBuffer;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.util.zip.CRC32;
 
 public class RequestCacheValue {
     private final ResponseType responseType;
@@ -148,8 +148,16 @@ public class RequestCacheValue {
 
     }
 
-    public ByteString generatePayload()
-    {
+    public PublicBuffer generatePayload() {
+        //first add the ID to the public buffer
+        try {
+            reqID.writeTo(pb.writeIDToPB());
+        } catch (IOException e) {
+            System.out.println("Could not write to public buffer, aborting");
+        }
+
+        KVResponse kvResponse;
+
         switch (this.responseType) {
             case INVALID_KEY:
             case INVALID_VALUE:
@@ -163,57 +171,66 @@ public class RequestCacheValue {
             case RETRY_NOT_EQUAL:
             case NO_KEY:
             case NO_MEM:
-                return KeyValueResponse.KVResponse.newBuilder()
-                        .setErrCode(errCode)
-                        .build()
-                        .toByteString();
+                kvResponse =    KVResponse.newBuilder()
+                                    .setErrCode(errCode)
+                                    .build();
+                break;
             case OVERLOAD_THREAD:
             case OVERLOAD_CACHE:
-                return KeyValueResponse.KVResponse.newBuilder()
-                        .setErrCode(errCode)
-                        .setOverloadWaitTime(overloadWaitTime)
-                        .build()
-                        .toByteString();
+                 kvResponse =   KVResponse.newBuilder()
+                                    .setErrCode(errCode)
+                                    .setOverloadWaitTime(overloadWaitTime)
+                                    .build();
+                 break;
             case MEMBERSHIP_COUNT:
-                return KeyValueResponse.KVResponse.newBuilder()
-                        .setErrCode(errCode)
-                        .setMembershipCount(membershipCount)
-                        .build().toByteString();
+                kvResponse =    KVResponse.newBuilder()
+                                    .setErrCode(errCode)
+                                    .setMembershipCount(membershipCount)
+                                    .build();
+                break;
             case PID:
-                return KeyValueResponse.KVResponse.newBuilder()
-                        .setErrCode(errCode)
-                        .setPid((int) pid)
-                        .build()
-                        .toByteString();
+                 kvResponse = KVResponse.newBuilder()
+                            .setErrCode(errCode)
+                            .setPid((int) pid)
+                            .build();
+                 break;
             case VALUE:
-                return KeyValueResponse.KVResponse.newBuilder()
-                        .setErrCode(errCode)
-                        .setValue(ByteString.copyFrom(value.getValue()))
-                        .setVersion(value.getVersion())
-                        .build()
-                        .toByteString();
+                 kvResponse = KVResponse.newBuilder()
+                                .setErrCode(errCode)
+                                .setValue(ByteString.copyFrom(value.getValue()))
+                                .setVersion(value.getVersion())
+                                .build();
+                 break;
             default: throw new IllegalStateException();
         }
 
+        try {
+            kvResponse.writeTo(pb.writePayloadToPBAfterID());
+        } catch (IOException e) {
+            System.out.println("Could not write to public buffer, aborting");
+        }
+        return pb;
     }
 
     public DatagramPacket generatePacket() {
         //prepare checksum
-        ByteString payload = this.generatePayload();
-        byte[] fullBody = reqID.concat(payload).toByteArray();
-        CRC32 crc32 = new CRC32();
-        crc32.update(fullBody);
-        long msgChecksum = crc32.getValue();
+        PublicBuffer pb = this.generatePayload();
+        long msgChecksum = pb.getCRCFromBody();
 
         //prepare message
-        byte[] msg = Message.Msg.newBuilder()
+        try {
+            Msg.newBuilder()
                 .setMessageID(reqID)
-                .setPayload(payload)
+                .setPayload(ByteString.readFrom(pb.readPayloadFromPBBody()))
                 .setCheckSum(msgChecksum)
                 .build()
-                .toByteArray();
+                .writeTo(pb.writePacketToPB());
+        } catch (IOException e) {
+            System.out.println("Failed to write to public buffer");
+        }
 
-        return new DatagramPacket(msg, msg.length, address, port);
+        int len = pb.getLen();
+        return new DatagramPacket(pb.returnBackingArrayAndClose(), len, address, port);
     }
 
 

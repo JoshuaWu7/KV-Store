@@ -16,7 +16,6 @@ import com.s82033788.CPEN431.A4.wrappers.UnwrappedPayload;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -24,7 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.zip.CRC32;
 
 import static com.s82033788.CPEN431.A4.cache.ResponseType.*;
 
@@ -246,24 +244,10 @@ public class KVServerTaskHandler implements Runnable {
 
         //into the public buffer (for big things)
         deserialized.getMessageID().writeTo(incomingPublicBuffer.writeIDToPB());
-        deserialized.getPayload().writeTo(incomingPublicBuffer.writePayloadToPB());
-
-
-        byte[] actualBody = messageID.concat(deserialized.getPayload()).toByteArray();
-
-
-
+        deserialized.getPayload().writeTo(incomingPublicBuffer.writePayloadToPBAfterID());
 
         //verify checksum
-        ByteBuffer allBody = incomingPublicBuffer.borrowBodyForCRCFromPB();
-        CRC32 crc32 = new CRC32();
-        crc32.update(allBody);
-        long actualCRC = crc32.getValue();
-
-        //fulfil return body to PB promise.
-        crc32 = null;
-        allBody = null;
-        incomingPublicBuffer.returnBodyToPB();
+        long actualCRC = incomingPublicBuffer.getCRCFromBody();
 
         if (actualCRC != expectedCRC) throw new InvalidChecksumException();
 
@@ -273,7 +257,7 @@ public class KVServerTaskHandler implements Runnable {
     // helper function to unpack payload
     private UnwrappedPayload unpackPayload(PublicBuffer payload) throws
             IOException, KeyLengthException, ValueLengthException {
-        KVRequest deserialized = KVRequest.parseFrom(payload.readPayloadFromPB());
+        KVRequest deserialized = KVRequest.parseFrom(payload.readPayloadFromPBBody());
         int command = deserialized.getCommand();
         byte[] key = deserialized.getKey().toByteArray();
         deserialized.getValue().writeTo(incomingPublicBuffer.writeValueToPB());

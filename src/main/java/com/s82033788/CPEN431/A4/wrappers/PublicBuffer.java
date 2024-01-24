@@ -3,6 +3,7 @@ package com.s82033788.CPEN431.A4.wrappers;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.zip.CRC32;
 
 public class PublicBuffer {
     private byte[] buf;
@@ -48,7 +49,22 @@ public class PublicBuffer {
         return (PB_OutputStream) (currentStream = new PB_OutputStream(buf));
     }
 
-    public PB_OutputStream writePayloadToPB() {
+
+    public long getCRCFromBody() {
+        checkStreamIsClosed();
+
+        if(contentType != PB_ContentType.PAYLOADNID)
+        {
+            throw new ContentMismatchException("The public buffer does not have what you are expecting");
+        }
+
+        CRC32 crc32 = new CRC32();
+        crc32.update(buf, 0, len);
+
+        return crc32.getValue();
+    }
+
+    public PB_OutputStream writePayloadToPBAfterID() {
         checkStreamIsClosed();
         if(contentType != PB_ContentType.ID)
             throw new ContentMismatchException("The public buffer does not have what you are expecting");
@@ -57,24 +73,7 @@ public class PublicBuffer {
         return (PB_OutputStream) (currentStream = new PB_OutputStream(buf, idOffset));//return output stream offset by current length set by writeIDToPB;
     }
 
-    public ByteBuffer borrowBodyForCRCFromPB() {
-        checkStreamIsClosed();
-        if (contentType != PB_ContentType.PAYLOADNID)
-            throw new ContentMismatchException("The public buffer does not have what you are expecting");
-
-        return ByteBuffer.wrap(buf, 0, len);
-    }
-
-
-    /**
-     * By running this function, the user promises not to keep any more copies of the
-     * ByteBuffer / underlying byte array borrowed previously, nor to the underlying byte array.
-     * If they do, they will be sent to hell.
-     */
-    public void returnBodyToPB() {
-    }
-
-    public PB_InputStream readPayloadFromPB() {
+    public PB_InputStream readPayloadFromPBBody() {
         checkStreamIsClosed();
         if (contentType != PB_ContentType.PAYLOADNID)
             throw new ContentMismatchException("The public buffer does not have what you are expecting");
@@ -95,6 +94,21 @@ public class PublicBuffer {
             throw new ContentMismatchException("The public buffer does not have what you are expecting");
 
         return Arrays.copyOf(buf, len);
+    }
+
+    public PB_OutputStream writePacketToPB() {
+        checkStreamIsClosed();
+
+        contentType = PB_ContentType.PACKET;
+        return (PB_OutputStream) (currentStream = new PB_OutputStream(buf));
+    }
+
+    public byte[] returnBackingArrayAndClose() {
+        checkStreamIsClosed();
+
+        currentStream = new PB_DummyStream();
+        contentType = PB_ContentType.EMPTY;
+        return buf;
     }
 
     private void checkStreamIsClosed()
@@ -193,6 +207,12 @@ public class PublicBuffer {
         }
     }
 
+    public class PB_DummyStream implements Closeable {
+        @Override
+        public void close() throws IOException {
+            return;
+        }
+    }
     public static final class ContentMismatchException extends IllegalStateException {
         public ContentMismatchException(String s) {
             super(s);
