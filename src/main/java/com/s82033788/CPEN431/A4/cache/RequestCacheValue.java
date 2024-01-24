@@ -153,7 +153,7 @@ public class RequestCacheValue {
         try {
             reqID.writeTo(pb.writeIDToPB());
         } catch (IOException e) {
-            System.out.println("Could not write to public buffer, aborting");
+            throw new RuntimeException("Failed to write to public buffer");
         }
 
         KVResponse kvResponse;
@@ -207,7 +207,7 @@ public class RequestCacheValue {
         try {
             kvResponse.writeTo(pb.writePayloadToPBAfterID());
         } catch (IOException e) {
-            System.out.println("Could not write to public buffer, aborting");
+            throw new RuntimeException("Failed to write to public buffer");
         }
         return pb;
     }
@@ -226,7 +226,7 @@ public class RequestCacheValue {
                 .build()
                 .writeTo(pb.writePacketToPB());
         } catch (IOException e) {
-            System.out.println("Failed to write to public buffer");
+            throw new RuntimeException("Failed to write to public buffer");
         }
 
         int len = pb.getLen();

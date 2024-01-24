@@ -170,7 +170,7 @@ public class PublicBuffer {
 
 
         @Override
-        public int available() throws IOException {
+        public int available() {
             return buf.limit() - buf.position();
         }
 

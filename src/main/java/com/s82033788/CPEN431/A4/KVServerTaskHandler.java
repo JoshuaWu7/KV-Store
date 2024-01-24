@@ -12,6 +12,7 @@ import com.s82033788.CPEN431.A4.wrappers.PB_ContentType;
 import com.s82033788.CPEN431.A4.wrappers.PublicBuffer;
 import com.s82033788.CPEN431.A4.wrappers.UnwrappedMessage;
 import com.s82033788.CPEN431.A4.wrappers.UnwrappedPayload;
+import org.apache.commons.pool2.impl.GenericObjectPool;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -29,17 +30,17 @@ import static com.s82033788.CPEN431.A4.cache.ResponseType.*;
 public class KVServerTaskHandler implements Runnable {
     private final AtomicInteger bytesUsed;
     private final Lock bytesUsedLock;
-    DatagramPacket iPacket;
-    DatagramSocket socket;
-    Cache<RequestCacheKey, RequestCacheValue> requestCache;
-    ConcurrentMap<KeyWrapper, ValueWrapper> map;
-    ReadWriteLock mapLock;
+    private DatagramPacket iPacket;
+    private DatagramSocket socket;
+    private Cache<RequestCacheKey, RequestCacheValue> requestCache;
+    private ConcurrentMap<KeyWrapper, ValueWrapper> map;
+    private ReadWriteLock mapLock;
     //this is concurrently inconsequential, they can just try again later.
-    ThreadPoolExecutor tpe;
-    boolean responseSent = false;
-    PublicBuffer incomingPublicBuffer;
+    private ThreadPoolExecutor tpe;
+    private boolean responseSent = false;
+    private PublicBuffer incomingPublicBuffer;
 
-    PublicBuffer outgoingPublicBuffer;
+    final private GenericObjectPool bytePool;  //this is thread safe
 
     // Constants
     final static int KEY_MAX_LEN = 32;
@@ -67,7 +68,8 @@ public class KVServerTaskHandler implements Runnable {
                                ReadWriteLock mapLock,
                                ThreadPoolExecutor tpe,
                                AtomicInteger bytesUsed,
-                               Lock bytesUsedLock) {
+                               Lock bytesUsedLock,
+                               GenericObjectPool<byte[]> bytePool) {
         this.iPacket = iPacket;
         this.socket = socket;
         this.requestCache = requestCache;
@@ -76,11 +78,18 @@ public class KVServerTaskHandler implements Runnable {
         this.tpe = tpe;
         this.bytesUsed = bytesUsed;
         this.bytesUsedLock = bytesUsedLock;
+        this.bytePool = bytePool;
     }
 
 
     @Override
-    public void run() {
+    public void run()
+    {
+        mainHandlerFunction();
+        bytePool.returnObject(iPacket.getData());
+    }
+
+    public void mainHandlerFunction() {
         if (responseSent) throw new IllegalStateException();
 
         //decode the message

@@ -7,11 +7,15 @@ import com.s82033788.CPEN431.A4.cache.RequestCacheValue;
 import com.s82033788.CPEN431.A4.map.KeyWrapper;
 import com.s82033788.CPEN431.A4.map.ValueWrapper;
 import net.openhft.chronicle.map.ChronicleMap;
+import org.apache.commons.pool2.impl.AbandonedConfig;
+import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.time.Duration;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -30,6 +34,8 @@ public class KVServer
     static final int PACKET_MAX = 16384;
     final static long  CACHE_SZ = 65536;//TODO tune by profiler
     final static long CACHE_EXPIRY = 5;
+    final static int BYTEARRAY_EXPIRY = 60;
+    final static int BYTEARRAY_ABANDONED = 1;
 
     public static void main( String[] args )
     {
@@ -37,6 +43,7 @@ public class KVServer
         try
         {
             //TODO get rid of magic numbers
+            //TODO clean up exception code
             DatagramSocket server = new DatagramSocket(PORT);
             ExecutorService executor = Executors.newCachedThreadPool(); //TODO tune profiler
 
@@ -65,15 +72,36 @@ public class KVServer
             AtomicInteger bytesUsed = new AtomicInteger(0);
             Lock bytesUsedLock = new ReentrantLock();
             ReadWriteLock mapLock = new ReentrantReadWriteLock();
-            byte[] iBuf;
+
             @SuppressWarnings("UnstableApiUsage") Cache<RequestCacheKey, RequestCacheValue> requestCache = CacheBuilder.newBuilder()
                     .expireAfterWrite(CACHE_EXPIRY, TimeUnit.SECONDS)
                     //.maximumSize(131072)
                     .build();
 
+            /* Setup pool of byte arrays*/
+
+            GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+            poolConfig.setMaxTotal(N_THREADS);
+            poolConfig.setMinEvictableIdleDuration(Duration.ofSeconds(BYTEARRAY_EXPIRY));
+
+
+            AbandonedConfig poolAbandonConfig = new AbandonedConfig();
+            poolAbandonConfig.setRemoveAbandonedTimeout(Duration.ofSeconds(BYTEARRAY_ABANDONED));
+            poolAbandonConfig.setRemoveAbandonedOnMaintenance(true);
+            poolAbandonConfig.setLogAbandoned(true);
+
+
+
+            GenericObjectPool<byte[]> bytePool
+                    = new GenericObjectPool<>(new ByteArrayFactory(), poolConfig, poolAbandonConfig);
+
+
+
+
 
             while(true){
-                iBuf = new byte[PACKET_MAX];
+                byte [] iBuf = bytePool.borrowObject();
+
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
                 server.receive(iPacket);
 
@@ -89,7 +117,8 @@ public class KVServer
                         mapLock,
                         tpe,
                         bytesUsed,
-                        bytesUsedLock));
+                        bytesUsedLock,
+                        bytePool));
 
             }
 
@@ -98,6 +127,9 @@ public class KVServer
             throw new RuntimeException(e);
         } catch (IOException e) {
             //System.err.println("Server IO exception.");
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+            System.err.println("Bytepool exception");
             throw new RuntimeException(e);
         }
 
