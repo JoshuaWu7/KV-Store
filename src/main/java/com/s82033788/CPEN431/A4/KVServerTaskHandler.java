@@ -119,7 +119,8 @@ public class KVServerTaskHandler implements Runnable {
                     () -> newProcessRequest(unwrappedMessage));
         } catch (ExecutionException e) {
             //TODO deal with this
-            throw new RuntimeException(e);
+            System.err.println("some problem");
+            return;
         }
 
         //assert that the request is exactly the same
@@ -188,19 +189,19 @@ public class KVServerTaskHandler implements Runnable {
 
         //overload
         //TODO replace cache to reference inside map, rather than whole packet.
-        if(requestCache.size() >= KVServer.CACHE_SZ){
-            System.out.println("Cache overflow. Delay Requested");
-            RequestCacheValue res = new RequestCacheValue.Builder(unwrappedMessage.getCrc(),
-                    iPacket.getAddress(),
-                    iPacket.getPort(),
-                    unwrappedMessage.getReqID(),
-                    incomingPublicBuffer)
-                    .setResponseType(OVERLOAD_CACHE)
-                    .build();
-
-            sendResponse(res.generatePacket());
-            return res;
-        }
+//        if(requestCache.size() >= KVServer.CACHE_SZ){
+//            System.out.println("Cache overflow. Delay Requested");
+//            RequestCacheValue res = new RequestCacheValue.Builder(unwrappedMessage.getCrc(),
+//                    iPacket.getAddress(),
+//                    iPacket.getPort(),
+//                    unwrappedMessage.getReqID(),
+//                    incomingPublicBuffer)
+//                    .setResponseType(OVERLOAD_CACHE)
+//                    .build();
+//
+//            sendResponse(res.generatePacket());
+//            return res;
+//        }
 
         if(tpe.getPoolSize() > 64)
         {
@@ -393,18 +394,19 @@ public class KVServerTaskHandler implements Runnable {
             return res;
         }
 
+        mapLock.readLock().lock();
         bytesUsedLock.lock();
 
         if(bytesUsed.get() >= 60_817_408) {
             RequestCacheValue res = scaf.setResponseType(NO_MEM).build();
             sendResponse(res.generatePacket());
             bytesUsedLock.unlock();
+            mapLock.readLock().unlock();
             return res;
         }
 
 
         //atomically put and respond, `tis thread safe.
-        mapLock.readLock().lock();
         AtomicReference<IOException> ioexception= new AtomicReference<>();
         AtomicReference<RequestCacheValue> res = new AtomicReference<>();
         map.compute(new KeyWrapper(payload.getKey()), (key, value) -> {
