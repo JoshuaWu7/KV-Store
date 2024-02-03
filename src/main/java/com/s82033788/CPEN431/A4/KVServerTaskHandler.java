@@ -2,6 +2,7 @@ package com.s82033788.CPEN431.A4;
 
 import com.google.common.cache.Cache;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.s82033788.CPEN431.A4.cache.RequestCacheKey;
 import com.s82033788.CPEN431.A4.cache.RequestCacheValue;
 import com.s82033788.CPEN431.A4.map.KeyWrapper;
@@ -119,7 +120,14 @@ public class KVServerTaskHandler implements Runnable {
                     () -> newProcessRequest(unwrappedMessage));
         } catch (ExecutionException e) {
             //TODO deal with this
-            System.err.println("some problem");
+            if(e.getCause() instanceof InvalidProtocolBufferException)
+            {
+                System.err.println("Unable to decode payload. Doing nothing");
+            }
+            else {
+                System.err.println(e);
+            }
+
             return;
         }
 
@@ -156,7 +164,7 @@ public class KVServerTaskHandler implements Runnable {
     }
 
     private RequestCacheValue newProcessRequest(UnwrappedMessage unwrappedMessage) throws
-            IOException {
+            IOException{
 
 
         UnwrappedPayload payload;
@@ -215,6 +223,7 @@ public class KVServerTaskHandler implements Runnable {
                     .build();
 
             sendResponse(res.generatePacket());
+            return res;
         }
 
         //process the packet by request code
