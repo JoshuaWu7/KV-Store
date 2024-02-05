@@ -3,24 +3,17 @@ package com.s82033788.CPEN431.A4;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.s82033788.CPEN431.A4.cache.RequestCacheKey;
-import com.s82033788.CPEN431.A4.cache.RequestCacheValue;
 import com.s82033788.CPEN431.A4.map.KeyWrapper;
 import com.s82033788.CPEN431.A4.map.ValueWrapper;
 import net.openhft.chronicle.map.ChronicleMap;
-import org.apache.commons.pool2.impl.AbandonedConfig;
-import org.apache.commons.pool2.impl.GenericObjectPool;
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
-import java.time.Duration;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -30,12 +23,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class KVServer
 {
     final static int PORT = 13788;
-    final static int N_THREADS = 8 ; //TODO tune by profiler
+    final static int N_THREADS = 6; //TODO tune by profiler
     static final int PACKET_MAX = 16384;
     final static long  CACHE_SZ = 65536;//TODO tune by profiler
-    final static long CACHE_EXPIRY = 5;
+    final static long CACHE_EXPIRY = 1;
     final static int BYTEARRAY_EXPIRY = 60;
     final static int BYTEARRAY_ABANDONED = 1;
+    final static int QUEUE_MAX = 8;
+    final static int MEMORY_SAFETY = 2_097_152;
 
     public static void main( String[] args )
     {
@@ -45,7 +40,8 @@ public class KVServer
             //TODO get rid of magic numbers
             //TODO clean up exception code
             DatagramSocket server = new DatagramSocket(PORT);
-            ExecutorService executor = Executors.newCachedThreadPool(); //TODO tune profiler
+            DatagramSocket sender = new DatagramSocket(PORT + 1);
+            ExecutorService executor = Executors.newFixedThreadPool(N_THREADS); //TODO tune profiler
 
             ConcurrentMap<KeyWrapper, ValueWrapper> map
                     = ChronicleMap
@@ -70,56 +66,58 @@ public class KVServer
             *
             * */
             AtomicInteger bytesUsed = new AtomicInteger(0);
-            Lock bytesUsedLock = new ReentrantLock();
             ReadWriteLock mapLock = new ReentrantReadWriteLock();
 
-            @SuppressWarnings("UnstableApiUsage") Cache<RequestCacheKey, RequestCacheValue> requestCache = CacheBuilder.newBuilder()
+            @SuppressWarnings("UnstableApiUsage") Cache<RequestCacheKey, DatagramPacket> requestCache = CacheBuilder.newBuilder()
                     .expireAfterWrite(CACHE_EXPIRY, TimeUnit.SECONDS)
                     //.maximumSize(131072)
                     .build();
 
             /* Setup pool of byte arrays*/
+            /* A simpler approach to keeping track of byte arrays*/
+            ConcurrentLinkedQueue<byte[]> bytePool = new ConcurrentLinkedQueue<>();
 
-            GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
-            poolConfig.setMaxTotal(N_THREADS);
-            poolConfig.setMinEvictableIdleDuration(Duration.ofSeconds(BYTEARRAY_EXPIRY));
-
-
-            AbandonedConfig poolAbandonConfig = new AbandonedConfig();
-            poolAbandonConfig.setRemoveAbandonedTimeout(Duration.ofSeconds(BYTEARRAY_ABANDONED));
-            poolAbandonConfig.setRemoveAbandonedOnMaintenance(true);
-            poolAbandonConfig.setLogAbandoned(true);
-
-
-
-            GenericObjectPool<byte[]> bytePool
-                    = new GenericObjectPool<>(new ByteArrayFactory(), poolConfig, poolAbandonConfig);
-
-
-
-
+            for(int i = 0; i < N_THREADS + 128; i++) {
+                bytePool.add(new byte[PACKET_MAX]);
+            }
 
             while(true){
-                byte [] iBuf = bytePool.borrowObject();
+                while(bytePool.isEmpty())Thread.yield();
+
+                byte [] iBuf = bytePool.poll();
 
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
                 server.receive(iPacket);
 
-                ThreadPoolExecutor tpe = (ThreadPoolExecutor) executor;
+                Runtime r = Runtime.getRuntime();
+                long remainingMemory  = r.maxMemory() - (r.totalMemory() - r.freeMemory());
+                boolean isOverloaded = remainingMemory < MEMORY_SAFETY
+                        || ((ThreadPoolExecutor) executor).getQueue().size() > QUEUE_MAX;
 
-
-
-                executor.execute(new KVServerTaskHandler(
-                        iPacket,
-                        server,
-                        requestCache,
-                        map,
-                        mapLock,
-                        tpe,
-                        bytesUsed,
-                        bytesUsedLock,
-                        bytePool));
-
+                if(isOverloaded)
+                {
+                    new KVServerTaskHandler(
+                            iPacket,
+                            sender,
+                            requestCache,
+                            map,
+                            mapLock,
+                            bytesUsed,
+                            bytePool,
+                            true);
+                }
+                else
+                {
+                    executor.execute(new KVServerTaskHandler(
+                            iPacket,
+                            server,
+                            requestCache,
+                            map,
+                            mapLock,
+                            bytesUsed,
+                            bytePool,
+                            isOverloaded));
+                }
             }
 
         } catch (SocketException e) {

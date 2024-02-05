@@ -144,6 +144,7 @@ public class PublicBuffer {
                 PublicBuffer.this.len = buffer.limit();
 
                 if(PublicBuffer.this.contentType == PB_ContentType.ID) PublicBuffer.this.idOffset = buffer.limit();
+                else if(PublicBuffer.this.contentType != PB_ContentType.PAYLOADNID) PublicBuffer.this.idOffset = 0;
 
                 buffer = null;
             }

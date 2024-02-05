@@ -217,20 +217,22 @@ public class RequestCacheValue {
         PublicBuffer pb = this.generatePayload();
         long msgChecksum = pb.getCRCFromBody();
 
+        byte[] fullMsg;
         //prepare message
         try {
-            Msg.newBuilder()
-                .setMessageID(reqID)
-                .setPayload(ByteString.readFrom(pb.readPayloadFromPBBody()))
-                .setCheckSum(msgChecksum)
-                .build()
-                .writeTo(pb.writePacketToPB());
+            fullMsg = Msg.newBuilder()
+                    .setMessageID(reqID)
+                    .setPayload(ByteString.readFrom(pb.readPayloadFromPBBody()))
+                    .setCheckSum(msgChecksum)
+                    .build()
+                    .toByteArray();
         } catch (IOException e) {
             throw new RuntimeException("Failed to write to public buffer");
         }
 
         int len = pb.getLen();
-        return new DatagramPacket(pb.returnBackingArrayAndClose(), len, address, port);
+        pb.returnBackingArrayAndClose();
+        return new DatagramPacket(fullMsg, fullMsg.length, address, port);
     }
 
 
