@@ -23,7 +23,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class KVServer
 {
     final static int PORT = 13788;
-    final static int N_THREADS = 6; //TODO tune by profiler
+    final static int N_THREADS = 4; //TODO tune by profiler
     static final int PACKET_MAX = 16384;
     final static long  CACHE_SZ = 65536;//TODO tune by profiler
     final static long CACHE_EXPIRY = 1;
@@ -40,7 +40,7 @@ public class KVServer
             //TODO get rid of magic numbers
             //TODO clean up exception code
             DatagramSocket server = new DatagramSocket(PORT);
-            DatagramSocket sender = new DatagramSocket(PORT + 1);
+
             ExecutorService executor = Executors.newFixedThreadPool(N_THREADS); //TODO tune profiler
 
             ConcurrentMap<KeyWrapper, ValueWrapper> map
@@ -77,47 +77,51 @@ public class KVServer
             /* A simpler approach to keeping track of byte arrays*/
             ConcurrentLinkedQueue<byte[]> bytePool = new ConcurrentLinkedQueue<>();
 
-            for(int i = 0; i < N_THREADS + 128; i++) {
+            for(int i = 0; i < N_THREADS + QUEUE_MAX; i++) {
                 bytePool.add(new byte[PACKET_MAX]);
             }
 
+            /* Outbound Queue and Thread*/
+            ConcurrentLinkedQueue<DatagramPacket> outbound = new ConcurrentLinkedQueue<>();
+            executor.execute(() -> {
+                while (true) {
+                    if(!outbound.isEmpty()) {
+                        try {
+                            server.send(outbound.poll());
+                        } catch (IOException e) {
+                            System.err.println("Failure to send packets");
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        Thread.yield();
+                    }
+                }
+            });
+
             while(true){
-                while(bytePool.isEmpty())Thread.yield();
+
+                Runtime r = Runtime.getRuntime();
+                long remainingMemory  = r.maxMemory() - (r.totalMemory() - r.freeMemory());
+
+                boolean isOverloaded = remainingMemory < MEMORY_SAFETY;
+
+                while(bytePool.isEmpty()) Thread.yield();
 
                 byte [] iBuf = bytePool.poll();
 
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
                 server.receive(iPacket);
 
-                Runtime r = Runtime.getRuntime();
-                long remainingMemory  = r.maxMemory() - (r.totalMemory() - r.freeMemory());
-                boolean isOverloaded = remainingMemory < MEMORY_SAFETY
-                        || ((ThreadPoolExecutor) executor).getQueue().size() > QUEUE_MAX;
-
-                if(isOverloaded)
-                {
-                    new KVServerTaskHandler(
-                            iPacket,
-                            sender,
-                            requestCache,
-                            map,
-                            mapLock,
-                            bytesUsed,
-                            bytePool,
-                            true);
-                }
-                else
-                {
-                    executor.execute(new KVServerTaskHandler(
-                            iPacket,
-                            server,
-                            requestCache,
-                            map,
-                            mapLock,
-                            bytesUsed,
-                            bytePool,
-                            isOverloaded));
-                }
+                executor.execute(new KVServerTaskHandler(
+                        iPacket,
+                        server,
+                        requestCache,
+                        map,
+                        mapLock,
+                        bytesUsed,
+                        bytePool,
+                        isOverloaded,
+                        outbound));
             }
 
         } catch (SocketException e) {

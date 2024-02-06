@@ -40,6 +40,7 @@ public class KVServerTaskHandler implements Runnable {
 
     final private ConcurrentLinkedQueue bytePool;  //this is thread safe
     final private boolean isOverloaded;
+    final private ConcurrentLinkedQueue<DatagramPacket> outbound;
 
     // Constants
     final static int KEY_MAX_LEN = 32;
@@ -58,7 +59,7 @@ public class KVServerTaskHandler implements Runnable {
     //parameters
 
     public final static int CACHE_OVL_WAIT_TIME = 80;
-    public final static int THREAD_OVL_WAIT_TIME = 4;
+    public final static int THREAD_OVL_WAIT_TIME = 16;
 
     public KVServerTaskHandler(DatagramPacket iPacket,
                                DatagramSocket socket,
@@ -67,7 +68,8 @@ public class KVServerTaskHandler implements Runnable {
                                ReadWriteLock mapLock,
                                AtomicInteger bytesUsed,
                                ConcurrentLinkedQueue<byte[]> bytePool,
-                               boolean isOverloaded) {
+                               boolean isOverloaded,
+                               ConcurrentLinkedQueue<DatagramPacket> outbound) {
         this.iPacket = iPacket;
         this.socket = socket;
         this.requestCache = requestCache;
@@ -76,7 +78,7 @@ public class KVServerTaskHandler implements Runnable {
         this.bytesUsed = bytesUsed;
         this.bytePool = bytePool;
         this.isOverloaded = isOverloaded;
-
+        this.outbound = outbound;
     }
 
 
@@ -93,6 +95,7 @@ public class KVServerTaskHandler implements Runnable {
         finally {
             Arrays.fill(iPacket.getData(), (byte) 0);
             bytePool.offer(iPacket.getData());
+
         }
     }
 
@@ -183,7 +186,7 @@ public class KVServerTaskHandler implements Runnable {
 
         //verify overload condition
         if(isOverloaded) {
-            System.out.println("Cache overflow. Delay Requested");
+            //System.out.println("Cache overflow. Delay Requested");
             RequestCacheValue res = new RequestCacheValue.Builder(unwrappedMessage.getCrc(),
                     iPacket.getAddress(),
                     iPacket.getPort(),
@@ -327,7 +330,10 @@ public class KVServerTaskHandler implements Runnable {
         if (responseSent) throw new IllegalStateException();
 
         responseSent = true;
-        socket.send(d);
+
+        outbound.offer(d);
+
+//        socket.send(d);
     }
 
     //helper functions to process requests
