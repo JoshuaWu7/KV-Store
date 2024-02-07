@@ -1,0 +1,609 @@
+CPEN 431 EVALUATION test Client
+Time: Wed Feb 07 05:31:17 UTC 2024
+Build Date: Sat Feb 03 23:54:48 UTC 2024
+Java process ID: 1287
+
+[Info] A4 Client running in SUBMIT mode.
+
+
+[Info] Created server list successfully.
+[Info] Checking co-deployment violation.
+[Info] Checking if the test client is running on AWS
+Detected instance type: c7gn.xlarge
+
+
+[Test isAlive]
+TEST PASSED
+[Info] Correct submission information.
+
+[ TEST Basic PUT/GET (PUT -> GET). Value Length = 8 Bytes ]
+TEST_PASSED
+
+[ TEST Basic PUT/GET (PUT -> GET). Value Length = 32 Bytes ]
+TEST_PASSED
+
+[ TEST Basic PUT/GET (PUT -> GET). Value Length = 2048 Bytes ]
+TEST_PASSED
+
+[ TEST Basic PUT/GET (PUT -> GET). Value Length = 10000 Bytes ]
+TEST_PASSED
+
+
+
+[ TEST Basic KVS with message version (PUT Version 1 -> GET -> PUT Version 2 -> GET). Value Length = 8 Bytes ]
+TEST_PASSED
+
+[ TEST Basic KVS with message version (PUT Version 1 -> GET -> PUT Version 2 -> GET). Value Length = 32 Bytes ]
+TEST_PASSED
+
+[ TEST Basic KVS with message version (PUT Version 1 -> GET -> PUT Version 2 -> GET). Value Length = 2048 Bytes ]
+TEST_PASSED
+
+[ TEST Basic KVS with message version (PUT Version 1 -> GET -> PUT Version 2 -> GET). Value Length = 10000 Bytes ]
+TEST_PASSED
+
+[ TEST Basic REMOVE (PUT -> GET -> REM -> GET). Value Length = 32 Bytes. ]
+TEST_PASSED
+
+[ TEST Double remove (PUT -> REM -> REM). Value Length = 32 Bytes. ]
+TEST_PASSED
+
+[ TEST Invalid Command. ]
+TEST_PASSED
+
+[ TEST At-Most-Once Client Policy (PUT -> REM -> REM). Value length =  32 Bytes ]
+TEST_PASSED
+
+[ TEST At-Most-Once Client Policy Empty REMs (EMPTY -> REM -> REM) ]
+TEST_PASSED
+
+[ TEST At-Most-Once Client Policy Error Return Code (REM -> PUT -> REM) ]
+TEST_PASSED
+
+[ TEST At-Most-Once Client Policy (PUT -> REM -> many PUT -> REM). Value length =  32 Bytes ]
+Pausing for 10 seconds to wait for the cache to be cleared!
+TEST_PASSED
+
+[ TEST At-Most-Once Client Policy For PUTs (PUT1 -> PUT2 -> PUT1 -> GET2) ]
+TEST_PASSED
+
+[ TEST Multi Client Performance (1 clients, 60.0 seconds): PUT -> GET (closed loop) ]
+Test time limit reached: 60.0s.
+Test completed after 404484 closed loops.
+[Test] Checking if server is up ...
+Test Passed. Server is ok.
+Test Status: TEST_PASSED
+Clients: 1
+Total Requests (without replies): 808968
+Total Requests (including replies): 808968
+Successful Responses: 808968
+Timeout Responses: 0
+Total Failed Responses: 0
+% Success: 100.0
+% Timeout: 0.0
+% Failed: 0.0
+Response Time (Successful requests):
+[max] 17ms, [min] 0ms
+[avg] 0.059794701397335864 ms, [stdev] 0.2530742016414821ms
+Throughput: 13482.350588313722 requests per second
+Goodput: 13482.350588313722 requests per second
+Retry Rate (Successful requests): 1.0
+
+[ TEST Multi Client Performance (2 clients, 60.0 seconds): PUT -> GET (closed loop) ]
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 361920 closed loops.
+Test completed after 361677 closed loops.
+[Test] Checking if server is up ...
+Test Passed. Server is ok.
+Test Status: TEST_PASSED
+Clients: 2
+Total Requests (without replies): 1447194
+Total Requests (including replies): 1447194
+Successful Responses: 1447194
+Timeout Responses: 0
+Total Failed Responses: 0
+% Success: 100.0
+% Timeout: 0.0
+% Failed: 0.0
+Response Time (Successful requests):
+[max] 26ms, [min] 0ms
+[avg] 0.0685920477835038 ms, [stdev] 0.29494036242331256ms
+Throughput: 24119.49800836653 requests per second
+Goodput: 24119.49800836653 requests per second
+Retry Rate (Successful requests): 1.0
+
+[ TEST Multi Client Performance (8 clients, 60.0 seconds): PUT -> GET (closed loop) ]
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 281914 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 282324 closed loops.
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 281774 closed loops.
+Test completed after 282027 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 281754 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 281817 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 282622 closed loops.
+Test completed after 281768 closed loops.
+[Test] Checking if server is up ...
+Test Passed. Server is ok.
+Test Status: TEST_PASSED
+Clients: 8
+Total Requests (without replies): 4512000
+Total Requests (including replies): 4512000
+Successful Responses: 4512000
+Timeout Responses: 0
+Total Failed Responses: 0
+% Success: 100.0
+% Timeout: 0.0
+% Failed: 0.0
+Response Time (Successful requests):
+[max] 46ms, [min] 0ms
+[avg] 0.08997517730496454 ms, [stdev] 0.4300711627898056ms
+Throughput: 75187.46875520746 requests per second
+Goodput: 75187.46875520746 requests per second
+Retry Rate (Successful requests): 1.0
+
+[ TEST Multi Client Performance (32 clients, 60.0 seconds): PUT -> GET (closed loop) ]
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 89980 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 88660 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 89239 closed loops.
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 90538 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 87672 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 87607 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 89759 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 88988 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 87580 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 88110 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 88527 closed loops.
+Test completed after 88603 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 89053 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 87204 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 88781 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 87575 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 89973 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 88116 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 88923 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 88862 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 89287 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 87882 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 87294 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 89163 closed loops.
+Test completed after 86856 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 88056 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 88706 closed loops.
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 88295 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 89150 closed loops.
+Test completed after 89739 closed loops.
+Test completed after 88363 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 89062 closed loops.
+[Test] Checking if server is up ...
+Test Passed. Server is ok.
+Test Status: TEST_PASSED
+Clients: 32
+Total Requests (without replies): 5671206
+Total Requests (including replies): 5671206
+Successful Responses: 5671206
+Timeout Responses: 0
+Total Failed Responses: 0
+% Success: 100.0
+% Timeout: 0.0
+% Failed: 0.0
+Response Time (Successful requests):
+[max] 150ms, [min] 0ms
+[avg] 0.31410814560430356 ms, [stdev] 0.9836936434725244ms
+Throughput: 94505.9241113833 requests per second
+Goodput: 94505.9241113833 requests per second
+Retry Rate (Successful requests): 1.0
+
+[ TEST Multi Client Performance (128 clients, 60.0 seconds): PUT -> GET (closed loop) ]
+Test time limit reached: 60.0s.
+Test completed after 22301 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22315 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22445 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22138 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22149 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22104 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22650 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 21975 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22286 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22065 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22390 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 21968 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22322 closed loops.
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 21957 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22579 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22416 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22068 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22420 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 21747 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22861 closed loops.
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 21825 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22182 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 21925 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22424 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22381 closed loops.
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 22685 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22519 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22935 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22396 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22765 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22340 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22195 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22213 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22179 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22599 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22919 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22134 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22525 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22046 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22714 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22296 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22506 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22403 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22546 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22715 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22548 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22453 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22196 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 21813 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22294 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22545 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22650 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22370 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22617 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22329 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 21989 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22567 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22478 closed loops.
+Test completed after 22011 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22690 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22272 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22123 closed loops.
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 22406 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22500 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 21956 closed loops.
+Test completed after 21718 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22417 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22174 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22427 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22792 closed loops.
+Test completed after 22009 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22526 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22731 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22739 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22018 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22680 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22446 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22442 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22699 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22192 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22599 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22714 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22584 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22062 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 21945 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22074 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22748 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22657 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22104 closed loops.
+Test completed after 22131 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22477 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22386 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22411 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 21903 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22323 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 23061 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22658 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 23124 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22883 closed loops.
+Test time limit reached: 60.0s.
+Test time limit reached: 60.0s.
+Test completed after 22584 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22912 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22364 closed loops.
+Test completed after 22449 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22951 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22590 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22408 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22338 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22363 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22814 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22143 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22647 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22712 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22452 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22175 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22975 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22749 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22987 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22872 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22797 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22682 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22683 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22574 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22362 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22590 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22772 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 23181 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22558 closed loops.
+Test time limit reached: 60.0s.
+Test completed after 22511 closed loops.
+[Test] Checking if server is up ...
+Test Passed. Server is ok.
+Test Status: TEST_PASSED
+Clients: 128
+Total Requests (without replies): 5742758
+Total Requests (including replies): 5742758
+Successful Responses: 5742758
+Timeout Responses: 0
+Total Failed Responses: 0
+% Success: 100.0
+% Timeout: 0.0
+% Failed: 0.0
+Response Time (Successful requests):
+[max] 225ms, [min] 0ms
+[avg] 1.300425683965788 ms, [stdev] 2.819194901388015ms
+Throughput: 95111.84352175426 requests per second
+Goodput: 95111.84352175426 requests per second
+Retry Rate (Successful requests): 1.0
+
+
+[ TEST Multi Client Crash: PUT -> GET (closed loop) + REM -> WIPEOUT (closed loop) ]
+[Test isAlive]
+Test Passed. Server is ok.
+TEST_PASSED
+Pausing for 10 seconds to wait for the cache to be cleared!
+
+[ TEST Single Client Capacity (Value Size = 10000 bytes, Limit = 7340 PUTs, ~69.99969482421875 MiB) : PUT -> GET (closed loop) ]
+Sending WIPE-OUT to all servers...
+[ ... Completed in 0.001 seconds ]
+[OK]
+Waiting for 5 seconds for the cache to be cleared!
+ERROR_OUT_OF_SPACE
+Received error code after 6083 closed loops (~58.01200866699219 MiB).
+PUTs sent = 6083(~58.01200866699219 MiB) , Limit = 7340
+[Test isAlive]
+Test Passed. Server is ok.
+TEST_PASSED
+Pausing for 10 seconds to wait for the cache to be cleared!
+
+[ TEST Single Client Capacity (Value Size = 5000 bytes, Limit = 14680 PUTs, ~69.99969482421875 MiB) : PUT -> GET (closed loop) ]
+Sending WIPE-OUT to all servers...
+[ ... Completed in 0.009 seconds ]
+[OK]
+Waiting for 5 seconds for the cache to be cleared!
+ERROR_OUT_OF_SPACE
+Received error code after 12165 closed loops (~58.007240295410156 MiB).
+PUTs sent = 12165(~58.007240295410156 MiB) , Limit = 14680
+[Test isAlive]
+Test Passed. Server is ok.
+TEST_PASSED
+
+[TEST Invalid Key ]
+TEST_PASSED
+
+[TEST Invalid Value ]
+TEST_PASSED
+
+Sending SHUTDOWN to 1 servers.
+[ ... Completed in 0.001 seconds ]
+[Test isAlive] for 172.31.41.4:13788
+[ ... Completed in 10.014 seconds ]
+Results Summary:
+Test Start Time : Wed Feb 07 05:31:17 UTC 2024
+Client AWS Instance Type : c7gn.xlarge
+Client Local IP : ip-172-31-47-101/172.31.47.101
+Client Local Hostname : ip-172-31-47-101
+Server List : 172.31.41.4_13788_
+Server Count : 1
+Basic PUT GET  : 2.0
+Double PUT with version : 2.0
+Remove Operation : 2.0
+Double Remove : 2.0
+Invalid Command : 2.0
+At-Most-Once Policy : 2.0
+At-Most-Once Policy Empty REMs : 2.0
+At-Most-Once Policy Error Return Code : 2.0
+At-Most-Once Policy Full Test : 2.0
+1 Client(s) Throughput (Requests per Second) : 13483.0
+1 Client(s) Goodput (Requests per Second) : 13483.0
+1 Client(s) Maximum Response Time (ms) : 17.0
+1 Client(s) Average Response Time (ms) : 1.0
+1 Client(s) STDEV Response Time (ms) : 1.0
+2 Client(s) Throughput (Requests per Second) : 24120.0
+2 Client(s) Goodput (Requests per Second) : 24120.0
+2 Client(s) Maximum Response Time (ms) : 26.0
+2 Client(s) Average Response Time (ms) : 1.0
+2 Client(s) STDEV Response Time (ms) : 1.0
+8 Client(s) Throughput (Requests per Second) : 75188.0
+8 Client(s) Goodput (Requests per Second) : 75188.0
+8 Client(s) Maximum Response Time (ms) : 46.0
+8 Client(s) Average Response Time (ms) : 1.0
+8 Client(s) STDEV Response Time (ms) : 1.0
+32 Client(s) Throughput (Requests per Second) : 94506.0
+32 Client(s) Goodput (Requests per Second) : 94506.0
+32 Client(s) Maximum Response Time (ms) : 150.0
+32 Client(s) Average Response Time (ms) : 1.0
+32 Client(s) STDEV Response Time (ms) : 1.0
+128 Client(s) Throughput (Requests per Second) : 95112.0
+128 Client(s) Goodput (Requests per Second) : 95112.0
+128 Client(s) Maximum Response Time (ms) : 225.0
+128 Client(s) Average Response Time (ms) : 2.0
+128 Client(s) STDEV Response Time (ms) : 3.0
+Multi-Client Crash : 2.0
+Single Client Capacity (MiB) for value size of 10000 : 59.0
+Single Client Capacity Test 1 : 2.0
+Single Client Capacity (MiB) for value size of 5000 : 59.0
+Single Client Capacity Test 2 : 2.0
+Invalid Key Test : 2.0
+Invalid Value Test : 2.0
+Shutdown Test : 2.0
+Result Verification Code : 355.0
+[Info] Submission Successful!
+Results server is up. Secret is valid.
+Results successfully submitted.
+
+Completed A4 Tests.
+Testing completed in 404.354s
