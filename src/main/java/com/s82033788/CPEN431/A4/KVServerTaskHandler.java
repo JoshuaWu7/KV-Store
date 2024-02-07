@@ -1,14 +1,12 @@
 package com.s82033788.CPEN431.A4;
 
 import com.google.common.cache.Cache;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.s82033788.CPEN431.A4.cache.RequestCacheKey;
 import com.s82033788.CPEN431.A4.cache.RequestCacheValue;
 import com.s82033788.CPEN431.A4.map.KeyWrapper;
 import com.s82033788.CPEN431.A4.map.ValueWrapper;
-import com.s82033788.CPEN431.A4.proto.KeyValueRequest.KVRequest;
-import com.s82033788.CPEN431.A4.proto.Message.Msg;
+import com.s82033788.CPEN431.A4.newProto.*;
 import com.s82033788.CPEN431.A4.wrappers.PB_ContentType;
 import com.s82033788.CPEN431.A4.wrappers.PublicBuffer;
 import com.s82033788.CPEN431.A4.wrappers.UnwrappedMessage;
@@ -125,7 +123,7 @@ public class KVServerTaskHandler implements Runnable {
        //TODO check cache space remaining
         DatagramPacket reply;
         try {
-            reply = requestCache.get(new RequestCacheKey(unwrappedMessage.getReqID().toByteArray(), unwrappedMessage.getCrc()),
+            reply = requestCache.get(new RequestCacheKey(unwrappedMessage.getMessageID(), unwrappedMessage.getCheckSum()),
                     () -> newProcessRequest(unwrappedMessage));
         } catch (ExecutionException e) {
             //TODO deal with this
@@ -178,19 +176,19 @@ public class KVServerTaskHandler implements Runnable {
 
         UnwrappedPayload payload;
         RequestCacheValue.Builder scaf = new RequestCacheValue.Builder(
-                unwrappedMessage.getCrc(),
+                unwrappedMessage.getCheckSum(),
                 iPacket.getAddress(),
                 iPacket.getPort(),
-                unwrappedMessage.getReqID(),
+                unwrappedMessage.getMessageID(),
                 incomingPublicBuffer);
 
         //verify overload condition
         if(isOverloaded) {
             //System.out.println("Cache overflow. Delay Requested");
-            RequestCacheValue res = new RequestCacheValue.Builder(unwrappedMessage.getCrc(),
+            RequestCacheValue res = new RequestCacheValue.Builder(unwrappedMessage.getCheckSum(),
                     iPacket.getAddress(),
                     iPacket.getPort(),
-                    unwrappedMessage.getReqID(),
+                    unwrappedMessage.getMessageID(),
                     incomingPublicBuffer)
                     .setResponseType(OVERLOAD_THREAD)
                     .build();
@@ -198,24 +196,7 @@ public class KVServerTaskHandler implements Runnable {
             return generateAndSend(res);
         }
 
-        try {
-            payload = unpackPayload(unwrappedMessage.getPayload());
-        }  catch (ValueLengthException e) {
-            System.err.println("Value field exceeds size");
-            System.err.println("Sending rejection packet");
-            RequestCacheValue res;
-            scaf.setResponseType(INVALID_VALUE);
-            res = scaf.build();
-            return generateAndSend(res);
-        } catch (KeyLengthException e) {
-            System.err.println("Value field exceeds size");
-            System.err.println("Sending rejection packet");
-
-            scaf.setResponseType(INVALID_KEY);
-            RequestCacheValue res = scaf.build();
-
-            return generateAndSend(res);
-        }
+        payload = unpackPayload(incomingPublicBuffer);
 
         //overload
         //TODO replace cache to reference inside map, rather than whole packet.
@@ -282,48 +263,29 @@ public class KVServerTaskHandler implements Runnable {
 
         incomingPublicBuffer = new PublicBuffer(iPacket.getData(), PB_ContentType.PACKET, iPacket.getLength());
 
-        Msg deserialized = Msg.parseFrom(incomingPublicBuffer.readPacketFromPB());
-        expectedCRC = deserialized.getCheckSum();
-        ByteString messageID = deserialized.getMessageID();
+        KVMsg deserialized = KVMsgSerializer.parseFrom(new KVMsgFactory(),
+                incomingPublicBuffer.readPacketFromPB());
 
-        //into the public buffer (for big things)
-        deserialized.getMessageID().writeTo(incomingPublicBuffer.writeIDToPB());
-        deserialized.getPayload().writeTo(incomingPublicBuffer.writePayloadToPBAfterID());
+        byte[] id = deserialized.getMessageID();
+        byte[] pl = deserialized.getPayload();
+
+        incomingPublicBuffer.writeIDToPB().write(id);
+        incomingPublicBuffer.writePayloadToPBAfterID().write(pl);
 
         //verify checksum
         long actualCRC = incomingPublicBuffer.getCRCFromBody();
 
-        if (actualCRC != expectedCRC) throw new InvalidChecksumException();
+        if (actualCRC != deserialized.getCheckSum()) throw new InvalidChecksumException();
 
-        return new UnwrappedMessage(messageID, incomingPublicBuffer, actualCRC);
+        return (UnwrappedMessage) deserialized;
     }
 
     // helper function to unpack payload
     private UnwrappedPayload unpackPayload(PublicBuffer payload) throws
-            IOException, KeyLengthException, ValueLengthException {
-        KVRequest deserialized;
-        try {
-            deserialized = KVRequest.parseFrom(payload.readPayloadFromPBBody());
-        } catch (InvalidProtocolBufferException e)
-        {
-            System.out.println("failed to unpack buf");
-            throw e;
-        }
-        int command = deserialized.getCommand();
-        byte[] key = deserialized.getKey().toByteArray();
-        deserialized.getValue().writeTo(incomingPublicBuffer.writeValueToPB());
-        int version = deserialized.getVersion();
+            IOException{
 
-        if(key.length > KEY_MAX_LEN) throw new KeyLengthException();
-        if(incomingPublicBuffer.getLen() > VALUE_MAX_LEN) throw new ValueLengthException();
-
-        return new UnwrappedPayload(command,
-                key,
-                incomingPublicBuffer.getValueCopy(),
-                version,
-                deserialized.hasKey(),
-                deserialized.hasValue(),
-                deserialized.hasVersion() );
+        com.s82033788.CPEN431.A4.newProto.KVRequest deserialized = KVRequestSerializer.parseFrom(new KVRequestFactory(), payload.readPayloadFromPBBody());
+        return (UnwrappedPayload) deserialized;
     }
 
     private void sendResponse(DatagramPacket d) throws IOException {
@@ -341,7 +303,7 @@ public class KVServerTaskHandler implements Runnable {
 
     private DatagramPacket handleGetMembershipCount(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
             throws IOException {
-        if(payload.isValueExists() || payload.isVersionExists() || payload.isKeyExists())
+        if(payload.hasValue() || payload.hasVersion() || payload.hasKey())
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
             return generateAndSend(res);
@@ -356,7 +318,7 @@ public class KVServerTaskHandler implements Runnable {
     }
 
     private DatagramPacket handleGetPID(RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
-        if(payload.isValueExists() || payload.isVersionExists() || payload.isKeyExists())
+        if(payload.hasValue() || payload.hasVersion() || payload.hasKey())
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
             return generateAndSend(res);
@@ -374,7 +336,7 @@ public class KVServerTaskHandler implements Runnable {
 
     private DatagramPacket handleIsAlive(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
             throws IOException {
-        if(payload.isValueExists() || payload.isVersionExists() || payload.isKeyExists())
+        if(payload.hasValue() || payload.hasVersion() || payload.hasKey())
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
             return generateAndSend(res);
@@ -386,7 +348,7 @@ public class KVServerTaskHandler implements Runnable {
 
 
     private DatagramPacket handleShutdown (RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
-        if(payload.isValueExists() || payload.isVersionExists() || payload.isKeyExists())
+        if(payload.hasValue() || payload.hasVersion() || payload.hasKey())
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
             return generateAndSend(res);
@@ -403,7 +365,7 @@ public class KVServerTaskHandler implements Runnable {
 
     private DatagramPacket handlePut(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
     throws IOException {
-        if(!payload.isKeyExists() || !payload.isValueExists())
+        if(!payload.hasKey() || !payload.hasValue())
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
 
@@ -414,10 +376,15 @@ public class KVServerTaskHandler implements Runnable {
         // which according to the spec, is the default value we want
 
         //defensive design to reject 0 length keys
-        if(payload.getKey().length <= 0)
+        if(payload.getKey().length <= 0 || payload.getKey().length > KEY_MAX_LEN)
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_KEY).build();
+            return generateAndSend(res);
+        }
 
+        if(payload.getValue().length > VALUE_MAX_LEN)
+        {
+            RequestCacheValue res = scaf.setResponseType(INVALID_VALUE).build();
             return generateAndSend(res);
         }
 
@@ -465,14 +432,14 @@ public class KVServerTaskHandler implements Runnable {
         return pkt.get();
     }
     private DatagramPacket handleGet(RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
-        if((!payload.isKeyExists()) || payload.isValueExists() || payload.isVersionExists())
+        if((!payload.hasKey()) || payload.hasValue() || payload.hasVersion())
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
             return generateAndSend(res);
         }
 
         //defensive design to reject 0 length keys
-        if(payload.getKey().length <= 0)
+        if(payload.getKey().length <= 0 || payload.getKey().length > KEY_MAX_LEN)
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_KEY).build();
             return generateAndSend(res);
@@ -512,14 +479,14 @@ public class KVServerTaskHandler implements Runnable {
     }
 
     private DatagramPacket handleDelete(RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
-        if((!payload.isKeyExists()) || payload.isValueExists() || payload.isVersionExists())
+        if((!payload.hasKey()) || payload.hasValue() || payload.hasVersion())
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
             return generateAndSend(res);
         }
 
         //defensive design to reject 0 length keys
-        if(payload.getKey().length <= 0)
+        if(payload.getKey().length <= 0 || payload.getKey().length > KEY_MAX_LEN)
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_KEY).build();
             return generateAndSend(res);
@@ -558,7 +525,7 @@ public class KVServerTaskHandler implements Runnable {
 
     private DatagramPacket handleWipeout(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
             throws IOException {
-        if(payload.isValueExists() || payload.isVersionExists() || payload.isKeyExists())
+        if(payload.hasValue() || payload.hasVersion() || payload.hasKey())
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
             return generateAndSend(res);

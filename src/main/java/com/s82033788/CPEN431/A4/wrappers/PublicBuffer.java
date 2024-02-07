@@ -25,13 +25,16 @@ public class PublicBuffer {
         return len;
     }
 
-    public int getPayloadLength() {
+    public int getLenOfPayload() {
         checkStreamIsClosed();
-        if (contentType != PB_ContentType.PAYLOADNID)
-            throw new ContentMismatchException("The public buffer does not have what you are expecting");
+        if(contentType != PB_ContentType.PAYLOADNID) throw new ContentMismatchException("Public buffer has something dif");
 
         return len - idOffset;
+    }
 
+    public boolean hasPayload() {
+        checkStreamIsClosed();
+        return contentType == PB_ContentType.PAYLOADNID;
     }
 
     public PB_InputStream readPacketFromPB() {
@@ -204,6 +207,9 @@ public class PublicBuffer {
 
         @Override
         public int read() throws IOException {
+            if(buf == null) {
+                throw new IllegalAccessError("Public Buffer Stream closed");
+            }
             return buf.hasRemaining() ? (buf.get() & 0xff) : -1;
         }
     }

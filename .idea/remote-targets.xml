@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteTargetsManager">
+    <targets>
+      <target name="ubuntu@amz:22" type="ssh/sftp" uuid="5fffa9c1-3190-4bd9-af19-1f6a7298a284">
+        <config>
+          <option name="projectRootOnTarget" value="$PROJECT_DIR$/../../../../ubuntu/cpen431_2024_a4_82033788" />
+          <option name="serverName" value="ubuntu@amz:22 agent" />
+          <option name="useRsync" value="true" />
+        </config>
+        <ContributedStateBase type="JavaLanguageRuntime">
+          <config>
+            <option name="homePath" value="/lib/jvm/java-21-openjdk-arm64" />
+            <option name="javaVersionString" value="21.0.1" />
+          </config>
+        </ContributedStateBase>
+      </target>
+    </targets>
+  </component>
+</project>

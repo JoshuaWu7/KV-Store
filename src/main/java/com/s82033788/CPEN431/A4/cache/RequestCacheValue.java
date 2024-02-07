@@ -1,24 +1,24 @@
 package com.s82033788.CPEN431.A4.cache;
 
-import com.google.protobuf.ByteString;
 import com.s82033788.CPEN431.A4.KVServerTaskHandler;
 import com.s82033788.CPEN431.A4.map.ValueWrapper;
-import com.s82033788.CPEN431.A4.proto.KeyValueResponse.KVResponse;
-import com.s82033788.CPEN431.A4.proto.Message.Msg;
+import com.s82033788.CPEN431.A4.newProto.KVMsgSerializer;
+import com.s82033788.CPEN431.A4.newProto.KVResponseSerializer;
 import com.s82033788.CPEN431.A4.wrappers.PublicBuffer;
+import com.s82033788.CPEN431.A4.wrappers.UnwrappedMessage;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 
-public class RequestCacheValue {
+public class RequestCacheValue implements com.s82033788.CPEN431.A4.newProto.KVResponse {
     private final ResponseType responseType;
-    private final int errCode;
+    private int errCode;
     private ValueWrapper value;
     private long pid;
     private int overloadWaitTime;
     private int membershipCount;
-    private final ByteString reqID;
+    private final byte[] reqID;
     private final long incomingCRC;
     private final InetAddress address;
     private final int port;
@@ -104,10 +104,10 @@ public class RequestCacheValue {
         private final long b_incomingCRC;
         private final InetAddress b_address;
         private final int b_port;
-        private final ByteString b_reqID;
+        private final byte[] b_reqID;
         private final PublicBuffer b_pb;
 
-        public Builder(long incomingCRC, InetAddress adr, int port, ByteString req_id, PublicBuffer pb) {
+        public Builder(long incomingCRC, InetAddress adr, int port, byte[] req_id, PublicBuffer pb) {
             this.b_incomingCRC = incomingCRC;
             this.b_address = adr;
             this.b_port = port;
@@ -151,64 +151,13 @@ public class RequestCacheValue {
     public PublicBuffer generatePayload() {
         //first add the ID to the public buffer
         try {
-            reqID.writeTo(pb.writeIDToPB());
+            pb.writeIDToPB().write(reqID);
         } catch (IOException e) {
             throw new RuntimeException("Failed to write to public buffer");
         }
 
-        KVResponse kvResponse;
+        KVResponseSerializer.serialize(this, pb.writePayloadToPBAfterID());
 
-        switch (this.responseType) {
-            case INVALID_KEY:
-            case INVALID_VALUE:
-            case INVALID_OPCODE:
-            case ISALIVE:
-            case SHUTDOWN:
-            case PUT:
-            case DEL:
-            case WIPEOUT:
-            case INVALID_OPTIONAL:
-            case RETRY_NOT_EQUAL:
-            case NO_KEY:
-            case NO_MEM:
-                kvResponse =    KVResponse.newBuilder()
-                                    .setErrCode(errCode)
-                                    .build();
-                break;
-            case OVERLOAD_THREAD:
-            case OVERLOAD_CACHE:
-                 kvResponse =   KVResponse.newBuilder()
-                                    .setErrCode(errCode)
-                                    .setOverloadWaitTime(overloadWaitTime)
-                                    .build();
-                 break;
-            case MEMBERSHIP_COUNT:
-                kvResponse =    KVResponse.newBuilder()
-                                    .setErrCode(errCode)
-                                    .setMembershipCount(membershipCount)
-                                    .build();
-                break;
-            case PID:
-                 kvResponse = KVResponse.newBuilder()
-                            .setErrCode(errCode)
-                            .setPid((int) pid)
-                            .build();
-                 break;
-            case VALUE:
-                 kvResponse = KVResponse.newBuilder()
-                                .setErrCode(errCode)
-                                .setValue(ByteString.copyFrom(value.getValue()))
-                                .setVersion(value.getVersion())
-                                .build();
-                 break;
-            default: throw new IllegalStateException();
-        }
-
-        try {
-            kvResponse.writeTo(pb.writePayloadToPBAfterID());
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to write to public buffer");
-        }
         return pb;
     }
 
@@ -217,27 +166,110 @@ public class RequestCacheValue {
         PublicBuffer pb = this.generatePayload();
         long msgChecksum = pb.getCRCFromBody();
 
+        int pl_len = pb.getLenOfPayload();
+
         byte[] fullMsg;
         //prepare message
         try {
-            fullMsg = Msg.newBuilder()
-                    .setMessageID(reqID)
-                    .setPayload(ByteString.readFrom(pb.readPayloadFromPBBody()))
-                    .setCheckSum(msgChecksum)
-                    .build()
-                    .toByteArray();
+            fullMsg = KVMsgSerializer.serialize(new UnwrappedMessage(reqID, pb.readPayloadFromPBBody().readNBytes(pl_len), msgChecksum));
+
         } catch (IOException e) {
             throw new RuntimeException("Failed to write to public buffer");
         }
 
-        int len = pb.getLen();
         pb.returnBackingArrayAndClose();
         return new DatagramPacket(fullMsg, fullMsg.length, address, port);
     }
 
+    @Override
+    public boolean hasErrCode() {
+        return true;
+    }
 
-    public long getIncomingCRC() {
-        return incomingCRC;
+    @Override
+    public int getErrCode() {
+        return this.errCode;
+    }
+
+    @Override
+    public void setErrCode(int errCode) {
+        throw new RuntimeException("A response is immutable");
+    }
+
+    @Override
+    public boolean hasValue() {
+        return value != null;
+    }
+
+    @Override
+    public byte[] getValue() {
+        return value.getValue();
+    }
+
+    @Override
+    public void setValue(byte[] value) {
+        //do nothing, a response is immutable
+        throw new RuntimeException("A response is immutable");
+    }
+
+    @Override
+    public boolean hasPid() {
+        return responseType == ResponseType.PID;
+    }
+
+    @Override
+    public int getPid() {
+        return (int) pid;
+    }
+
+    @Override
+    public void setPid(int pid) {
+        throw new RuntimeException("Responses are immutable");
+    }
+
+    @Override
+    public boolean hasVersion() {
+        return responseType == ResponseType.VALUE;
+    }
+
+    @Override
+    public int getVersion() {
+        return value.getVersion();
+    }
+
+    @Override
+    public void setVersion(int version) {
+        throw new RuntimeException("Responses are immutable");
+    }
+
+    @Override
+    public boolean hasOverloadWaitTime() {
+        return responseType == ResponseType.OVERLOAD_CACHE || responseType == ResponseType.OVERLOAD_THREAD;
+    }
+
+    @Override
+    public int getOverloadWaitTime() {
+        return overloadWaitTime;
+    }
+
+    @Override
+    public void setOverloadWaitTime(int overloadWaitTime) {
+        throw new RuntimeException("Responses are immutable");
+    }
+
+    @Override
+    public boolean hasMembershipCount() {
+        return responseType == ResponseType.MEMBERSHIP_COUNT;
+    }
+
+    @Override
+    public int getMembershipCount() {
+        return membershipCount;
+    }
+
+    @Override
+    public void setMembershipCount(int membershipCount) {
+        throw new RuntimeException("Responses are immutable");
     }
 }
 
