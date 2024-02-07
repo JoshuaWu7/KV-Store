@@ -1,24 +1,28 @@
-package com.s82033788.CPEN431.A4.proto;
+package com.s82033788.CPEN431.A4.cache;
 
-import com.google.protobuf.ByteString;
 import com.s82033788.CPEN431.A4.KVServerTaskHandler;
-import com.s82033788.CPEN431.A4.ValueWrapper;
+import com.s82033788.CPEN431.A4.map.ValueWrapper;
+import com.s82033788.CPEN431.A4.newProto.KVMsgSerializer;
+import com.s82033788.CPEN431.A4.newProto.KVResponseSerializer;
+import com.s82033788.CPEN431.A4.wrappers.PublicBuffer;
+import com.s82033788.CPEN431.A4.wrappers.UnwrappedMessage;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.util.zip.CRC32;
 
-public class RequestCacheValue {
-    private ResponseType responseType;
+public class RequestCacheValue implements com.s82033788.CPEN431.A4.newProto.KVResponse {
+    private final ResponseType responseType;
     private int errCode;
     private ValueWrapper value;
     private long pid;
     private int overloadWaitTime;
     private int membershipCount;
-    private ByteString reqID;
-    private long incomingCRC;
-    private InetAddress address;
-    private int port;
+    private final byte[] reqID;
+    private final long incomingCRC;
+    private final InetAddress address;
+    private final int port;
+    private final PublicBuffer pb;
 
     private RequestCacheValue(Builder builder) {
         ResponseType type = builder.b_type;
@@ -30,6 +34,7 @@ public class RequestCacheValue {
         this.port = builder.b_port;
         this.reqID = builder.b_reqID;
         this.incomingCRC = builder.b_incomingCRC;
+        this.pb = builder.b_pb;
 
         switch (type) {
             case INVALID_KEY:       this.errCode = KVServerTaskHandler.RES_CODE_INVALID_KEY;        break;
@@ -96,16 +101,18 @@ public class RequestCacheValue {
         private long b_pid;
         private boolean b_pid_set = false;
         private ValueWrapper b_value;
-        private long b_incomingCRC;
-        private InetAddress b_address;
-        private int b_port;
-        private ByteString b_reqID;
+        private final long b_incomingCRC;
+        private final InetAddress b_address;
+        private final int b_port;
+        private final byte[] b_reqID;
+        private final PublicBuffer b_pb;
 
-        public Builder(long incomingCRC, InetAddress adr, int port, ByteString req_id) {
+        public Builder(long incomingCRC, InetAddress adr, int port, byte[] req_id, PublicBuffer pb) {
             this.b_incomingCRC = incomingCRC;
             this.b_address = adr;
             this.b_port = port;
             this.b_reqID = req_id;
+            this.b_pb = pb;
         }
 
         public Builder setResponseType(ResponseType type) {
@@ -141,98 +148,128 @@ public class RequestCacheValue {
 
     }
 
-    public ByteString generatePayload()
-    {
-        switch (this.responseType) {
-            case INVALID_KEY:
-            case INVALID_VALUE:
-            case INVALID_OPCODE:
-            case ISALIVE:
-            case SHUTDOWN:
-            case PUT:
-            case DEL:
-            case WIPEOUT:
-            case INVALID_OPTIONAL:
-            case RETRY_NOT_EQUAL:
-            case NO_KEY:
-            case NO_MEM:
-                return KeyValueResponse.KVResponse.newBuilder()
-                        .setErrCode(errCode)
-                        .build()
-                        .toByteString();
-            case OVERLOAD_THREAD:
-            case OVERLOAD_CACHE:
-                return KeyValueResponse.KVResponse.newBuilder()
-                        .setErrCode(errCode)
-                        .setOverloadWaitTime(overloadWaitTime)
-                        .build()
-                        .toByteString();
-            case MEMBERSHIP_COUNT:
-                return KeyValueResponse.KVResponse.newBuilder()
-                        .setErrCode(errCode)
-                        .setMembershipCount(membershipCount)
-                        .build().toByteString();
-            case PID:
-                return KeyValueResponse.KVResponse.newBuilder()
-                        .setErrCode(errCode)
-                        .setPid((int) pid)
-                        .build()
-                        .toByteString();
-            case VALUE:
-                return KeyValueResponse.KVResponse.newBuilder()
-                        .setErrCode(errCode)
-                        .setValue(ByteString.copyFrom(value.getValue()))
-                        .setVersion(value.getVersion())
-                        .build()
-                        .toByteString();
-            default: throw new IllegalStateException();
+    public PublicBuffer generatePayload() {
+        //first add the ID to the public buffer
+        try {
+            pb.writeIDToPB().write(reqID);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to write to public buffer");
         }
 
+        KVResponseSerializer.serialize(this, pb.writePayloadToPBAfterID());
+
+        return pb;
     }
 
     public DatagramPacket generatePacket() {
         //prepare checksum
-        ByteString payload = this.generatePayload();
-        byte[] fullBody = reqID.concat(payload).toByteArray();
-        CRC32 crc32 = new CRC32();
-        crc32.update(fullBody);
-        long msgChecksum = crc32.getValue();
+        PublicBuffer pb = this.generatePayload();
+        long msgChecksum = pb.getCRCFromBody();
 
+        int pl_len = pb.getLenOfPayload();
+
+        byte[] fullMsg;
         //prepare message
-        byte[] msg = Message.Msg.newBuilder()
-                .setMessageID(reqID)
-                .setPayload(payload)
-                .setCheckSum(msgChecksum)
-                .build()
-                .toByteArray();
+        try {
+            fullMsg = KVMsgSerializer.serialize(new UnwrappedMessage(reqID, pb.readPayloadFromPBBody().readNBytes(pl_len), msgChecksum));
 
-        DatagramPacket pkt = new DatagramPacket(msg, msg.length, address, port);
-        return pkt;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to write to public buffer");
+        }
+
+        pb.returnBackingArrayAndClose();
+        return new DatagramPacket(fullMsg, fullMsg.length, address, port);
     }
 
+    @Override
+    public boolean hasErrCode() {
+        return true;
+    }
+
+    @Override
     public int getErrCode() {
-        return errCode;
+        return this.errCode;
     }
 
-    public ValueWrapper getValue() {
-        return value;
+    @Override
+    public void setErrCode(int errCode) {
+        throw new RuntimeException("A response is immutable");
     }
 
-    public long getPid() {
-        return pid;
+    @Override
+    public boolean hasValue() {
+        return value != null;
     }
 
+    @Override
+    public byte[] getValue() {
+        return value.getValue();
+    }
 
+    @Override
+    public void setValue(byte[] value) {
+        //do nothing, a response is immutable
+        throw new RuntimeException("A response is immutable");
+    }
+
+    @Override
+    public boolean hasPid() {
+        return responseType == ResponseType.PID;
+    }
+
+    @Override
+    public int getPid() {
+        return (int) pid;
+    }
+
+    @Override
+    public void setPid(int pid) {
+        throw new RuntimeException("Responses are immutable");
+    }
+
+    @Override
+    public boolean hasVersion() {
+        return responseType == ResponseType.VALUE;
+    }
+
+    @Override
+    public int getVersion() {
+        return value.getVersion();
+    }
+
+    @Override
+    public void setVersion(int version) {
+        throw new RuntimeException("Responses are immutable");
+    }
+
+    @Override
+    public boolean hasOverloadWaitTime() {
+        return responseType == ResponseType.OVERLOAD_CACHE || responseType == ResponseType.OVERLOAD_THREAD;
+    }
+
+    @Override
     public int getOverloadWaitTime() {
         return overloadWaitTime;
     }
 
+    @Override
+    public void setOverloadWaitTime(int overloadWaitTime) {
+        throw new RuntimeException("Responses are immutable");
+    }
+
+    @Override
+    public boolean hasMembershipCount() {
+        return responseType == ResponseType.MEMBERSHIP_COUNT;
+    }
+
+    @Override
     public int getMembershipCount() {
         return membershipCount;
     }
 
-    public long getIncomingCRC() {
-        return incomingCRC;
+    @Override
+    public void setMembershipCount(int membershipCount) {
+        throw new RuntimeException("Responses are immutable");
     }
 }
 
