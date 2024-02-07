@@ -2,6 +2,9 @@ package com.s82033788.CPEN431.A4.wrappers;
 
 import com.s82033788.CPEN431.A4.newProto.KVRequest;
 
+/**
+ * A class than encapsulates the payload of an incoming requrest. Self Explanatory.
+ */
 public class UnwrappedPayload implements KVRequest {
     private int command;
     private byte[] key;

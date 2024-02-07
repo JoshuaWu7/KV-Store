@@ -3,6 +3,7 @@ package com.s82033788.CPEN431.A4.newProto;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 final public class ProtobufInputStream {
 
@@ -351,12 +352,12 @@ final public class ProtobufInputStream {
 		if (size <= (data.length - cursor.getCurrentPosition()) && size > 0) {
 			// Fast path:  We already have the bytes in a contiguous buffer, so
 			//   just copy directly from it.
-			final String result = new String(data, cursor.getCurrentPosition(), size, "UTF-8");
+			final String result = new String(data, cursor.getCurrentPosition(), size, StandardCharsets.UTF_8);
 			cursor.addToPosition(size);
 			return result;
 		} else {
 			// Slow path:  Build a byte array first then copy it.
-			return new String(readRawBytes(size, data, cursor), "UTF-8");
+			return new String(readRawBytes(size, data, cursor), StandardCharsets.UTF_8);
 		}
 	}
 
@@ -599,7 +600,7 @@ final public class ProtobufInputStream {
 		if( cursor.isEndOfStreamReached() ) {
 			throw new IOException("unexpected end of stream. malformed String");
 		}
-		String result = new String(readRawBytes(size, is, cursor), "UTF-8");
+		String result = new String(readRawBytes(size, is, cursor), StandardCharsets.UTF_8);
 		if( cursor.isEndOfStreamReached() ) {
 			throw new IOException("unexpected end of stream. malformed String");
 		}

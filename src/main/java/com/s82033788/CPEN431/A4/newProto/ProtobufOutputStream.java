@@ -4,6 +4,7 @@ package com.s82033788.CPEN431.A4.newProto;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 final public class ProtobufOutputStream {
@@ -261,7 +262,7 @@ final public class ProtobufOutputStream {
 	}
 
 	public static void writeString(final int fieldNumber, final String value, OutputStream baos) throws IOException {
-		final byte[] bytes = value.getBytes("UTF-8");
+		final byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
 		int size = computeTagSize(fieldNumber);
 		size += computeRawVarint32Size(bytes.length);
 		byte[] buffer = new byte[size];
@@ -426,7 +427,7 @@ final public class ProtobufOutputStream {
 		// Unfortunately there does not appear to be any way to tell Java to encode
 		// UTF-8 directly into our buffer, so we have to let it create its own byte
 		// array and then copy.
-		final byte[] bytes = value.getBytes("UTF-8");
+		final byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
 		int result = writeRawVarint32(bytes.length, buffer, position);
 		return writeRawBytes(bytes, buffer, result);
 	}
@@ -778,13 +779,9 @@ final public class ProtobufOutputStream {
 	}
 
 	public static int computeStringSizeNoTag(final String value) {
-		try {
-			final byte[] bytes = value.getBytes("UTF-8");
-			return computeRawVarint32Size(bytes.length) + bytes.length;
-		} catch (UnsupportedEncodingException e) {
-			throw new RuntimeException("UTF-8 not supported.", e);
-		}
-	}
+        final byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        return computeRawVarint32Size(bytes.length) + bytes.length;
+    }
 
 	public static int computeUint32SizeNoTag(final int value) {
 		return computeRawVarint32Size(value);

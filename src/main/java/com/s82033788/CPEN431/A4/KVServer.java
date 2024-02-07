@@ -23,33 +23,30 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class KVServer
 {
     final static int PORT = 13788;
-    final static int N_THREADS = 4; //TODO tune by profiler
+    final static int N_THREADS = 4;
     static final int PACKET_MAX = 16384;
-    final static long  CACHE_SZ = 65536;//TODO tune by profiler
     final static long CACHE_EXPIRY = 1;
-    final static int BYTEARRAY_EXPIRY = 60;
-    final static int BYTEARRAY_ABANDONED = 1;
     final static int QUEUE_MAX = 8;
     final static int MEMORY_SAFETY = 2_097_152;
+    final static int AVG_KEY_SZ = 32;
+    final static int MAP_ENTRIES = 146_800;
+    final static int AVG_VAL_SZ = 500;
 
     public static void main( String[] args )
     {
 
         try
         {
-            //TODO get rid of magic numbers
-            //TODO clean up exception code
             DatagramSocket server = new DatagramSocket(PORT);
-
-            ExecutorService executor = Executors.newFixedThreadPool(N_THREADS); //TODO tune profiler
+            ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
 
             ConcurrentMap<KeyWrapper, ValueWrapper> map
                     = ChronicleMap
                     .of(KeyWrapper.class, ValueWrapper.class)
                     .name("KVStore")
-                    .averageKeySize(32)
-                    .entries(146_800)
-                    .averageValueSize(500)
+                    .averageKeySize(AVG_KEY_SZ)
+                    .entries(MAP_ENTRIES)
+                    .averageValueSize(AVG_VAL_SZ)
                     .create();
 
             /*
@@ -76,7 +73,6 @@ public class KVServer
             /* Setup pool of byte arrays*/
             /* A simpler approach to keeping track of byte arrays*/
             ConcurrentLinkedQueue<byte[]> bytePool = new ConcurrentLinkedQueue<>();
-
             for(int i = 0; i < N_THREADS + QUEUE_MAX; i++) {
                 bytePool.add(new byte[PACKET_MAX]);
             }
@@ -102,11 +98,9 @@ public class KVServer
 
                 Runtime r = Runtime.getRuntime();
                 long remainingMemory  = r.maxMemory() - (r.totalMemory() - r.freeMemory());
-
                 boolean isOverloaded = remainingMemory < MEMORY_SAFETY;
 
                 while(bytePool.isEmpty()) Thread.yield();
-
                 byte [] iBuf = bytePool.poll();
 
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
@@ -130,7 +124,7 @@ public class KVServer
             //System.err.println("Server IO exception.");
             throw new RuntimeException(e);
         } catch (Exception e) {
-            System.err.println("Bytepool exception");
+//            System.err.println("Bytepool exception");
             throw new RuntimeException(e);
         }
 

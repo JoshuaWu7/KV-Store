@@ -10,14 +10,6 @@ public class UnwrappedMessage implements KVMsg {
     private byte[] payload;
     private long crc;
 
-
-//    public UnwrappedMessage(ByteString reqID, PublicBuffer payload, long crc) {
-//        this.setReqID(reqID);
-//        this.setPayload(payload);
-//        this.setCrc(crc);
-//    }
-
-
     public UnwrappedMessage(byte[] msgID, byte[] payload, long crc) {
         this.msgID = msgID;
         this.payload = payload;
@@ -36,10 +28,6 @@ public class UnwrappedMessage implements KVMsg {
     public byte[] getMessageID() {
         return msgID;
     }
-
-//    public ByteString getMsgIDString() {
-//        return reqID;
-//    }
 
     @Override
     public void setMessageID(byte[] messageID) {

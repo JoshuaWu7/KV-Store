@@ -13,7 +13,6 @@ import com.s82033788.CPEN431.A4.wrappers.UnwrappedPayload;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -26,14 +25,14 @@ import static com.s82033788.CPEN431.A4.cache.ResponseType.*;
 public class KVServerTaskHandler implements Runnable {
     /* Thread parameters */
     private final AtomicInteger bytesUsed;
-    private DatagramPacket iPacket;
-    private Cache<RequestCacheKey, DatagramPacket> requestCache;
-    private ConcurrentMap<KeyWrapper, ValueWrapper> map;
-    private ReadWriteLock mapLock;
+    private final DatagramPacket iPacket;
+    private final Cache<RequestCacheKey, DatagramPacket> requestCache;
+    private final ConcurrentMap<KeyWrapper, ValueWrapper> map;
+    private final ReadWriteLock mapLock;
     private boolean responseSent = false;
     private PublicBuffer incomingPublicBuffer;
 
-    final private ConcurrentLinkedQueue bytePool;  //this is thread safe
+    final private ConcurrentLinkedQueue<byte[]> bytePool;  //this is thread safe
     final private boolean isOverloaded;
     final private ConcurrentLinkedQueue<DatagramPacket> outbound;
 
@@ -56,6 +55,15 @@ public class KVServerTaskHandler implements Runnable {
     public final static int RES_CODE_INVALID_OPTIONAL = 0x21;
     public final static int RES_CODE_RETRY_NOT_EQUAL = 0x22;
 
+    /* Request Codes */
+    public final static int REQ_CODE_PUT = 0x01;
+    public final static int REQ_CODE_GET = 0X02;
+    public final static int REQ_CODE_DEL = 0X03;
+    public final static int REQ_CODE_SHU = 0X04;
+    public final static int REQ_CODE_WIP = 0X05;
+    public final static int REQ_CODE_ALI = 0X06;
+    public final static int REQ_CODE_PID = 0X07;
+    public final static int REQ_CODE_MEM = 0X08;
 
     public KVServerTaskHandler(DatagramPacket iPacket,
                                Cache<RequestCacheKey, DatagramPacket> requestCache,
@@ -91,6 +99,9 @@ public class KVServerTaskHandler implements Runnable {
         }
     }
 
+    /**
+     * Executes the main logic of the thread to process incoming requests and replies.
+     */
     public void mainHandlerFunction() {
         if (responseSent) throw new IllegalStateException();
 
@@ -119,7 +130,6 @@ public class KVServerTaskHandler implements Runnable {
             reply = requestCache.get(new RequestCacheKey(unwrappedMessage.getMessageID(), unwrappedMessage.getCheckSum()),
                     () -> newProcessRequest(unwrappedMessage));
         } catch (ExecutionException e) {
-            //TODO deal with this
             if(e.getCause() instanceof IOException)
             {
                 System.err.println("Unable to decode payload. Doing nothing");
@@ -174,14 +184,14 @@ public class KVServerTaskHandler implements Runnable {
         DatagramPacket res;
         switch(payload.getCommand())
         {
-            case 0x01: res = handlePut(scaf, payload); break;
-            case 0x02: res = handleGet(scaf, payload); break;
-            case 0x03: res = handleDelete(scaf, payload); break;
-            case 0x04: res = handleShutdown(scaf, payload); break;
-            case 0x05: res = handleWipeout(scaf, payload);  break;
-            case 0x06: res = handleIsAlive(scaf, payload); break;
-            case 0x07: res =  handleGetPID(scaf, payload); break;
-            case 0x08: res = handleGetMembershipCount(scaf, payload);  break;
+            case REQ_CODE_PUT: res = handlePut(scaf, payload); break;
+            case REQ_CODE_GET: res = handleGet(scaf, payload); break;
+            case REQ_CODE_DEL: res = handleDelete(scaf, payload); break;
+            case REQ_CODE_SHU: res = handleShutdown(scaf, payload); break;
+            case REQ_CODE_WIP: res = handleWipeout(scaf, payload);  break;
+            case REQ_CODE_ALI: res = handleIsAlive(scaf, payload); break;
+            case REQ_CODE_PID: res =  handleGetPID(scaf, payload); break;
+            case REQ_CODE_MEM: res = handleGetMembershipCount(scaf, payload);  break;
 
             default: {
                 RequestCacheValue val = scaf.setResponseType(INVALID_OPCODE).build();
@@ -229,7 +239,7 @@ public class KVServerTaskHandler implements Runnable {
      * unpacks the payload into an accesible format
      * @param payload
      * @return The unpacked object
-     * @throws IOException If there was a problem unpacking it from the public buffer
+     * @throws IOException If there was a problem unpacking it from the public buffer;
      */
     private UnwrappedPayload unpackPayload(PublicBuffer payload) throws
             IOException{
@@ -358,7 +368,7 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         //defensive design to reject 0 length keys
-        if(payload.getKey().length <= 0 || payload.getKey().length > KEY_MAX_LEN)
+        if(payload.getKey().length == 0 || payload.getKey().length > KEY_MAX_LEN)
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_KEY).build();
             return generateAndSend(res);
@@ -406,7 +416,7 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         //defensive design to reject 0 length keys
-        if(payload.getKey().length <= 0 || payload.getKey().length > KEY_MAX_LEN)
+        if(payload.getKey().length == 0 || payload.getKey().length > KEY_MAX_LEN)
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_KEY).build();
             return generateAndSend(res);
@@ -439,7 +449,7 @@ public class KVServerTaskHandler implements Runnable {
      * @param payload Payload from the client
      * @return The packet sent
      */
-    private DatagramPacket handleDelete(RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
+    private DatagramPacket handleDelete(RequestCacheValue.Builder scaf, UnwrappedPayload payload) {
         if((!payload.hasKey()) || payload.hasValue() || payload.hasVersion())
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
@@ -447,7 +457,7 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         //defensive design to reject 0 length keys
-        if(payload.getKey().length <= 0 || payload.getKey().length > KEY_MAX_LEN)
+        if(payload.getKey().length == 0 || payload.getKey().length > KEY_MAX_LEN)
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_KEY).build();
             return generateAndSend(res);
@@ -460,13 +470,12 @@ public class KVServerTaskHandler implements Runnable {
             if (value == null) {
                 RequestCacheValue res = scaf.setResponseType(NO_KEY).build();
                 pkt.set(generateAndSend(res));
-                return value;
             } else {
                 bytesUsed.addAndGet(-value.getValue().length);
                 RequestCacheValue res = scaf.setResponseType(DEL).build();
                 pkt.set(generateAndSend(res));
-                return null;
             }
+            return null;
         });
         mapLock.readLock().unlock();
 

@@ -13,7 +13,7 @@ import java.net.InetAddress;
 
 public class RequestCacheValue implements com.s82033788.CPEN431.A4.newProto.KVResponse {
     private final ResponseType responseType;
-    private int errCode;
+    private final int errCode;
     private ValueWrapper value;
     private long pid;
     private int overloadWaitTime;
