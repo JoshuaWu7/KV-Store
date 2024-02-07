@@ -114,7 +114,6 @@ public class KVServer
 
                 executor.execute(new KVServerTaskHandler(
                         iPacket,
-                        server,
                         requestCache,
                         map,
                         mapLock,
