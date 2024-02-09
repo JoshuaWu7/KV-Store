@@ -285,7 +285,7 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         RequestCacheValue res = scaf
-                .setResponseType(INVALID_OPTIONAL)
+                .setResponseType(MEMBERSHIP_COUNT)
                 .setMembershipCount(1)
                 .build();
 

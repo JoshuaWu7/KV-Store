@@ -1,11 +1,9 @@
 package com.s82033788.CPEN431.A4.wrappers;
 
-import com.google.protobuf.ByteString;
 import com.s82033788.CPEN431.A4.newProto.KVMsg;
 
 public class UnwrappedMessage implements KVMsg {
 
-    private ByteString reqID;
     private byte[] msgID;
     private byte[] payload;
     private long crc;
@@ -21,7 +19,7 @@ public class UnwrappedMessage implements KVMsg {
 
     @Override
     public boolean hasMessageID() {
-        return reqID == null;
+        return msgID != null;
     }
 
     @Override
@@ -32,7 +30,6 @@ public class UnwrappedMessage implements KVMsg {
     @Override
     public void setMessageID(byte[] messageID) {
         this.msgID = messageID;
-        this.reqID = ByteString.copyFrom(messageID);
     }
 
     @Override
