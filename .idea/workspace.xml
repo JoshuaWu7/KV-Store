@@ -10,10 +10,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="Added A4.jar">
+    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="patched some random bugs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerTaskHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/KVServerTaskHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/UnwrappedMessage.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/wrappers/UnwrappedMessage.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -208,9 +206,9 @@
     <list>
       <item itemvalue="Application.KVServer" />
       <item itemvalue="JAR Application.Remote" />
-      <item itemvalue="JUnit.java in CPEN431_2024_A4_82033788" />
       <item itemvalue="JUnit.KVServerTest" />
       <item itemvalue="JUnit.KVServerTest.main" />
+      <item itemvalue="JUnit.java in CPEN431_2024_A4_82033788" />
     </list>
     <recent_temporary>
       <list>
@@ -267,6 +265,12 @@
       <workItem from="1707427137657" duration="2379000" />
       <workItem from="1707433077317" duration="11000" />
       <workItem from="1707438728926" duration="55000" />
+      <workItem from="1707444863903" duration="86000" />
+      <workItem from="1707444969900" duration="31000" />
+      <workItem from="1707452218640" duration="2254000" />
+      <workItem from="1707502232324" duration="684000" />
+      <workItem from="1707503099858" duration="108000" />
+      <workItem from="1707507375625" duration="2196000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <option name="closed" value="true" />
@@ -404,7 +408,15 @@
       <option name="project" value="LOCAL" />
       <updated>1707287716495</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="patched some random bugs">
+      <option name="closed" value="true" />
+      <created>1707444915236</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1707444915236</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -450,7 +462,8 @@
     <MESSAGE value="switch to protobuf alt impl." />
     <MESSAGE value="Added log" />
     <MESSAGE value="clean up and refactor" />
-    <option name="LAST_COMMIT_MESSAGE" value="clean up and refactor" />
+    <MESSAGE value="patched some random bugs" />
+    <option name="LAST_COMMIT_MESSAGE" value="patched some random bugs" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
