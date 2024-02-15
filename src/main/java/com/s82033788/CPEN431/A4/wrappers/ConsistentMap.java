@@ -23,11 +23,7 @@ public class ConsistentMap {
         for(String server : serverList)
         {
             InetAddress addr = InetAddress.getByName(server);
-            for(int i = 0; i < vnodes; i++)
-            {
-                int hashcode = Objects.hash(addr, i);
-                ring.put(hashcode, addr);
-            }
+            addServer(addr);
         }
     }
 
@@ -49,9 +45,8 @@ public class ConsistentMap {
         }
     }
 
-    public InetAddress getServer(byte[] key)
-    {
-        if(ring.isEmpty()) return null;
+    public InetAddress getServer(byte[] key) throws NoServersException {
+        if(ring.isEmpty()) throw new NoServersException();
 
         int hashcode = Arrays.hashCode(key);
 
@@ -63,7 +58,7 @@ public class ConsistentMap {
         return server.getValue();
     }
 
-
-
+class NoServersException extends Exception {}
 
 }
+
