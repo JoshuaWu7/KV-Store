@@ -3,15 +3,14 @@ package com.s82033788.CPEN431.A4;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.s82033788.CPEN431.A4.cache.RequestCacheKey;
+import com.s82033788.CPEN431.A4.consistentMap.ServerRecord;
 import com.s82033788.CPEN431.A4.map.KeyWrapper;
 import com.s82033788.CPEN431.A4.map.ValueWrapper;
-import com.s82033788.CPEN431.A4.wrappers.ConsistentMap;
+import com.s82033788.CPEN431.A4.consistentMap.ConsistentMap;
 import net.openhft.chronicle.map.ChronicleMap;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketException;
+import java.net.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -34,6 +33,16 @@ public class KVServer
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
+    final static ServerRecord self;
+
+    static {
+        try {
+            self = new ServerRecord(InetAddress.getLocalHost(), PORT);
+        } catch (UnknownHostException e) {
+            System.err.println("Unable to get local address");
+            throw new RuntimeException(e);
+        }
+    }
 
     public static void main( String[] args )
     {
@@ -121,7 +130,8 @@ public class KVServer
                         bytesUsed,
                         bytePool,
                         isOverloaded,
-                        outbound));
+                        outbound,
+                        serverRing));
             }
 
         } catch (SocketException e) {

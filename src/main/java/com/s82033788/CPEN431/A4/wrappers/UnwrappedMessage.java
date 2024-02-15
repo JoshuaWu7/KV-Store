@@ -1,7 +1,10 @@
 package com.s82033788.CPEN431.A4.wrappers;
 
+import com.s82033788.CPEN431.A4.consistentMap.ServerRecord;
 import com.s82033788.CPEN431.A4.newProto.KVMsg;
+import com.s82033788.CPEN431.A4.newProto.KVMsgSerializer;
 
+import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -82,6 +85,11 @@ public class UnwrappedMessage implements KVMsg {
         sourceIP = InetAddress.getByAddress(sourceAddress);
     }
 
+    public void setSourceAddress(InetAddress address)
+    {
+        sourceIP = address;
+    }
+
     @Override
     public boolean hasSourcePort() {
         return hasSourceAddress();
@@ -96,4 +104,11 @@ public class UnwrappedMessage implements KVMsg {
     public void setSourcePort(int sourcePort) {
         this.sourcePort = sourcePort;
     }
+
+    public DatagramPacket generatePacket(ServerRecord record)
+    {
+        byte[] msg = KVMsgSerializer.serialize(this);
+        return new DatagramPacket(msg, msg.length, record.getAddress(), record.getPort());
+    }
+
 }

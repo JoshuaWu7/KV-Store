@@ -1,4 +1,4 @@
-package com.s82033788.CPEN431.A4.wrappers;
+package com.s82033788.CPEN431.A4.consistentMap;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class ConsistentMap {
-    private final TreeMap<Integer, InetAddress> ring;
+    private final TreeMap<Integer, ServerRecord> ring;
     private final int vnodes;
     private final ReadWriteLock lock;
 
@@ -25,12 +25,15 @@ public class ConsistentMap {
 
         for(String server : serverList)
         {
-            InetAddress addr = InetAddress.getByName(server);
-            addServer(addr);
+            String[] serverNPort = server.split(":");
+            InetAddress addr = InetAddress.getByName(serverNPort[0]);
+            int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
+
+            addServer(new ServerRecord(addr, port));
         }
     }
 
-    public void addServer(InetAddress address)
+    public void addServer(ServerRecord address)
     {
         lock.writeLock().lock();
         for(int i = 0; i < vnodes; i++)
@@ -41,7 +44,7 @@ public class ConsistentMap {
         lock.writeLock().unlock();
     }
 
-    public void removeServer(InetAddress address)
+    public void removeServer(ServerRecord address)
     {
         lock.writeLock().lock();
         for(int i = 0; i < vnodes; i++)
@@ -52,7 +55,7 @@ public class ConsistentMap {
         lock.writeLock().unlock();
     }
 
-    public InetAddress getServer(byte[] key) throws NoServersException {
+    public ServerRecord getServer(byte[] key) throws NoServersException {
         lock.readLock().lock();
         if(ring.isEmpty())
         {
@@ -62,7 +65,7 @@ public class ConsistentMap {
 
         int hashcode = Arrays.hashCode(key);
 
-        Map.Entry<Integer, InetAddress> server = ring.floorEntry(hashcode);
+        Map.Entry<Integer, ServerRecord> server = ring.floorEntry(hashcode);
         /* Deal with case where the successor of the key is past "0" */
         server = (server == null) ? ring.firstEntry(): server;
 
@@ -71,7 +74,7 @@ public class ConsistentMap {
         return server.getValue();
     }
 
-class NoServersException extends Exception {}
+public class NoServersException extends Exception {}
 
 }
 

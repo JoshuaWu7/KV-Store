@@ -3,6 +3,8 @@ package com.s82033788.CPEN431.A4;
 import com.google.common.cache.Cache;
 import com.s82033788.CPEN431.A4.cache.RequestCacheKey;
 import com.s82033788.CPEN431.A4.cache.RequestCacheValue;
+import com.s82033788.CPEN431.A4.consistentMap.ConsistentMap;
+import com.s82033788.CPEN431.A4.consistentMap.ServerRecord;
 import com.s82033788.CPEN431.A4.map.KeyWrapper;
 import com.s82033788.CPEN431.A4.map.ValueWrapper;
 import com.s82033788.CPEN431.A4.newProto.*;
@@ -13,6 +15,8 @@ import com.s82033788.CPEN431.A4.wrappers.UnwrappedPayload;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -20,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 
+import static com.s82033788.CPEN431.A4.KVServer.self;
 import static com.s82033788.CPEN431.A4.cache.ResponseType.*;
 
 public class KVServerTaskHandler implements Runnable {
@@ -31,6 +36,7 @@ public class KVServerTaskHandler implements Runnable {
     private final ReadWriteLock mapLock;
     private boolean responseSent = false;
     private PublicBuffer incomingPublicBuffer;
+    private ConsistentMap serverRing;
 
     final private ConcurrentLinkedQueue<byte[]> bytePool;  //this is thread safe
     final private boolean isOverloaded;
@@ -72,7 +78,8 @@ public class KVServerTaskHandler implements Runnable {
                                AtomicInteger bytesUsed,
                                ConcurrentLinkedQueue<byte[]> bytePool,
                                boolean isOverloaded,
-                               ConcurrentLinkedQueue<DatagramPacket> outbound) {
+                               ConcurrentLinkedQueue<DatagramPacket> outbound,
+                               ConsistentMap serverRing) {
         this.iPacket = iPacket;
         this.requestCache = requestCache;
         this.map = map;
@@ -81,6 +88,7 @@ public class KVServerTaskHandler implements Runnable {
         this.bytePool = bytePool;
         this.isOverloaded = isOverloaded;
         this.outbound = outbound;
+        this.serverRing = serverRing;
     }
 
 
@@ -125,10 +133,66 @@ public class KVServerTaskHandler implements Runnable {
         }
 
 
+        UnwrappedPayload payload;
+        try {
+            payload = unpackPayload(incomingPublicBuffer);
+        } catch (IOException e) {
+            System.err.println("Unable to decode payload. Doing nothing");
+            return;
+        }
+
+        /* check whether it is handled by self or will it be forwarded*/
+        try {
+            /* Forward if key exists and is not mapped to current server*/
+            if(payload.hasKey())
+            {
+                byte[] key = payload.getKey();
+                ServerRecord destination = serverRing.getServer(key);
+
+                if(!destination.equals(self))
+                {
+                    // Set source so packet will be sent to correct sender.
+                    unwrappedMessage.setSourceAddress(iPacket.getAddress());
+                    unwrappedMessage.setSourcePort(iPacket.getPort());
+                    DatagramPacket p = unwrappedMessage.generatePacket(destination);
+                    sendResponse(p);
+                    return;
+                }
+            }
+        } catch (ConsistentMap.NoServersException e) {
+            System.err.println("There are no servers in the server ring");
+            System.err.println("Doing nothing");
+            return;
+        }
+
+
+        /* Prepare scaffolding for response */
+        if(unwrappedMessage.hasSourceAddress() != unwrappedMessage.hasSourcePort())
+        {
+            System.err.println("The sender's source address did not have both address and port!");
+            System.err.println("Doing nothing");
+            return;
+        }
+
+        RequestCacheValue.Builder scaf;
+        try {
+            scaf = new RequestCacheValue.Builder(
+                    unwrappedMessage.getCheckSum(),
+                    unwrappedMessage.hasSourceAddress() ? InetAddress.getByAddress(unwrappedMessage.getSourceAddress()) : iPacket.getAddress(),
+                    unwrappedMessage.hasSourcePort() ? unwrappedMessage.getSourcePort() : iPacket.getPort(),
+                    unwrappedMessage.getMessageID(),
+                    incomingPublicBuffer);
+        } catch (UnknownHostException e) {
+            System.err.println("Could not parse the forwarding address. Doing nothing");
+            return;
+        }
+
+
+        /* Requests here can be handled locally */
         DatagramPacket reply;
         try {
             reply = requestCache.get(new RequestCacheKey(unwrappedMessage.getMessageID(), unwrappedMessage.getCheckSum()),
-                    () -> newProcessRequest(unwrappedMessage));
+                    () -> newProcessRequest(scaf, payload));
         } catch (ExecutionException e) {
             if(e.getCause() instanceof IOException)
             {
@@ -149,36 +213,21 @@ public class KVServerTaskHandler implements Runnable {
 
     /**
      * The function that handles the request and returns responses after the message is unwrapped
-     * @param unwrappedMessage The unwrapped message
+     * @param payload The incoming payload
+     * @param scaf The scaffolding for the response (pre-built)
      * @return The packet sent in response
      * @throws IOException If there are problems unpacking or packing into the public buffer
      */
-    private DatagramPacket newProcessRequest(UnwrappedMessage unwrappedMessage) throws
+    private DatagramPacket newProcessRequest(RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws
             IOException{
-
-        UnwrappedPayload payload;
-        RequestCacheValue.Builder scaf = new RequestCacheValue.Builder(
-                unwrappedMessage.getCheckSum(),
-                iPacket.getAddress(),
-                iPacket.getPort(),
-                unwrappedMessage.getMessageID(),
-                incomingPublicBuffer);
-
         //verify overload condition
         if(isOverloaded) {
             //System.out.println("Cache overflow. Delay Requested");
-            RequestCacheValue res = new RequestCacheValue.Builder(unwrappedMessage.getCheckSum(),
-                    iPacket.getAddress(),
-                    iPacket.getPort(),
-                    unwrappedMessage.getMessageID(),
-                    incomingPublicBuffer)
+            RequestCacheValue res = scaf
                     .setResponseType(OVERLOAD_THREAD)
                     .build();
-
             return generateAndSend(res);
         }
-
-        payload = unpackPayload(incomingPublicBuffer);
 
         //process the packet by request code
         DatagramPacket res;
