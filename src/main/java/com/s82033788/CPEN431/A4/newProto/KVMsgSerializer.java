@@ -1,5 +1,4 @@
 package com.s82033788.CPEN431.A4.newProto;
-
 public final class KVMsgSerializer {
 public static byte[] serialize(KVMsg message) {
 try {
@@ -18,6 +17,14 @@ totalSize += ProtobufOutputStream.computeRawVarint32Size(message.getPayload().le
 if (message.hasCheckSum()) {
 totalSize += ProtobufOutputStream.computeFixed64Size(3, message.getCheckSum());
 }
+if (message.hasSourceAddress()) {
+totalSize += message.getSourceAddress().length;
+totalSize += ProtobufOutputStream.computeTagSize(100);
+totalSize += ProtobufOutputStream.computeRawVarint32Size(message.getSourceAddress().length);
+}
+if (message.hasSourcePort()) {
+totalSize += ProtobufOutputStream.computeUint32Size(101, message.getSourcePort());
+}
 final byte[] result = new byte[totalSize];
 int position = 0;
 if (message.hasMessageID()) {
@@ -28,6 +35,12 @@ position = ProtobufOutputStream.writeBytes(2, message.getPayload(), result, posi
 }
 if (message.hasCheckSum()) {
 position = ProtobufOutputStream.writeFixed64(3, message.getCheckSum(), result, position);
+}
+if (message.hasSourceAddress()) {
+position = ProtobufOutputStream.writeBytes(100, message.getSourceAddress(), result, position);
+}
+if (message.hasSourcePort()) {
+position = ProtobufOutputStream.writeUint32(101, message.getSourcePort(), result, position);
 }
 ProtobufOutputStream.checkNoSpaceLeft(result, position);
 return result;
@@ -46,6 +59,12 @@ ProtobufOutputStream.writeBytes(2, message.getPayload(), os);
 }
 if (message.hasCheckSum()) {
 ProtobufOutputStream.writeFixed64(3, message.getCheckSum(), os);
+}
+if (message.hasSourceAddress()) {
+ProtobufOutputStream.writeBytes(100, message.getSourceAddress(), os);
+}
+if (message.hasSourcePort()) {
+ProtobufOutputStream.writeUint32(101, message.getSourcePort(), os);
 }
 } catch (java.io.IOException e) {
 throw new RuntimeException("Serializing to a byte array threw an IOException (should never happen).", e);
@@ -86,6 +105,12 @@ message.setPayload(ProtobufInputStream.readBytes(data,cursor));
 break;
 case 3: 
 message.setCheckSum(ProtobufInputStream.readFixed64(data,cursor));
+break;
+case 100: 
+message.setSourceAddress(ProtobufInputStream.readBytes(data,cursor));
+break;
+case 101: 
+message.setSourcePort(ProtobufInputStream.readUint32(data,cursor));
 break;
 }
 }
@@ -128,6 +153,12 @@ message.setPayload(ProtobufInputStream.readBytes(is,cursor));
 break;
 case 3: 
 message.setCheckSum(ProtobufInputStream.readFixed64(is,cursor));
+break;
+case 100: 
+message.setSourceAddress(ProtobufInputStream.readBytes(is,cursor));
+break;
+case 101: 
+message.setSourcePort(ProtobufInputStream.readUint32(is,cursor));
 break;
 }
 }

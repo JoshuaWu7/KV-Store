@@ -12,7 +12,6 @@ public class ConsistentMap {
     private final TreeMap<Integer, InetAddress> ring;
     private final int vnodes;
 
-
     public ConsistentMap(int vnodes, String serverPathName) throws IOException {
         this.ring = new TreeMap<>();
         this.vnodes = vnodes;

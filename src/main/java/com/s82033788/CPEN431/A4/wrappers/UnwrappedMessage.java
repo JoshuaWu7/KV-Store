@@ -2,11 +2,16 @@ package com.s82033788.CPEN431.A4.wrappers;
 
 import com.s82033788.CPEN431.A4.newProto.KVMsg;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 public class UnwrappedMessage implements KVMsg {
 
     private byte[] msgID;
     private byte[] payload;
     private long crc;
+    private InetAddress sourceIP;
+    private int sourcePort;
 
     public UnwrappedMessage(byte[] msgID, byte[] payload, long crc) {
         this.msgID = msgID;
@@ -60,5 +65,35 @@ public class UnwrappedMessage implements KVMsg {
     @Override
     public byte[] getPayload() {
         return this.payload;
+    }
+
+    @Override
+    public boolean hasSourceAddress() {
+        return sourceIP != null;
+    }
+
+    @Override
+    public byte[] getSourceAddress() {
+        return sourceIP.getAddress();
+    }
+
+    @Override
+    public void setSourceAddress(byte[] sourceAddress) throws UnknownHostException {
+        sourceIP = InetAddress.getByAddress(sourceAddress);
+    }
+
+    @Override
+    public boolean hasSourcePort() {
+        return hasSourceAddress();
+    }
+
+    @Override
+    public int getSourcePort() {
+        return sourcePort;
+    }
+
+    @Override
+    public void setSourcePort(int sourcePort) {
+        this.sourcePort = sourcePort;
     }
 }

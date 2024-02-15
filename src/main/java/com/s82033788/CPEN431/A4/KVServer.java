@@ -5,6 +5,7 @@ import com.google.common.cache.CacheBuilder;
 import com.s82033788.CPEN431.A4.cache.RequestCacheKey;
 import com.s82033788.CPEN431.A4.map.KeyWrapper;
 import com.s82033788.CPEN431.A4.map.ValueWrapper;
+import com.s82033788.CPEN431.A4.wrappers.ConsistentMap;
 import net.openhft.chronicle.map.ChronicleMap;
 
 import java.io.IOException;
@@ -31,6 +32,8 @@ public class KVServer
     final static int AVG_KEY_SZ = 32;
     final static int MAP_ENTRIES = 146_800;
     final static int AVG_VAL_SZ = 500;
+    final static String SERVER_LIST = "servers.txt";
+    final static int VNODE_COUNT = 4;
 
     public static void main( String[] args )
     {
@@ -93,6 +96,10 @@ public class KVServer
                     }
                 }
             });
+
+            /* Set up the list of servers */
+            ConsistentMap serverRing = new ConsistentMap(VNODE_COUNT, SERVER_LIST);
+
 
             while(true){
 
