@@ -65,7 +65,7 @@ public class ConsistentMap {
 
         int hashcode = Arrays.hashCode(key);
 
-        Map.Entry<Integer, ServerRecord> server = ring.floorEntry(hashcode);
+        Map.Entry<Integer, ServerRecord> server = ring.ceilingEntry(hashcode);
         /* Deal with case where the successor of the key is past "0" */
         server = (server == null) ? ring.firstEntry(): server;
 
