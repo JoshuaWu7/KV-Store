@@ -10,7 +10,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -51,12 +50,12 @@ public class ConsistentMap {
         lock.writeLock().unlock();
     }
 
-    public void removeServer(ServerRecord address)
+    public void removeServer(InetAddress address, int port)
     {
         lock.writeLock().lock();
         for(int i = 0; i < vnodes; i++)
         {
-            int hashcode = Objects.hash(address, i);
+            long hashcode = new ServerRecord(address, port, i).getHash();
             ring.remove(hashcode);
         }
         lock.writeLock().unlock();
