@@ -1,0 +1,7 @@
+message KVMsg {
+    required bytes messageID = 1;
+    required bytes payload = 2;
+    required fixed64 checkSum = 3;
+    optional bytes sourceAddress = 100;
+    optional uint32 sourcePort = 101;
+}
