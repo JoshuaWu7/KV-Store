@@ -6,19 +6,26 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class ConsistentMap {
-    private final TreeMap<Integer, ServerRecord> ring;
+    private final TreeMap<Long , ServerRecord> ring;
     private final int vnodes;
     private final ReadWriteLock lock;
+    private final MessageDigest md5;
 
-    public ConsistentMap(int vnodes, String serverPathName) throws IOException {
+    public ConsistentMap(int vnodes, String serverPathName) throws IOException, NoSuchAlgorithmException {
         this.ring = new TreeMap<>();
         this.vnodes = vnodes;
         this.lock = new ReentrantReadWriteLock();
+        this.md5 = MessageDigest.getInstance("MD5");
 
         Path path = Paths.get(serverPathName);
         List<String> serverList = Files.readAllLines(path , StandardCharsets.UTF_8);
@@ -29,17 +36,17 @@ public class ConsistentMap {
             InetAddress addr = InetAddress.getByName(serverNPort[0]);
             int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
 
-            addServer(new ServerRecord(addr, port));
+            addServer(addr, port);
         }
     }
 
-    public void addServer(ServerRecord address)
+    public void addServer(InetAddress address, int port)
     {
         lock.writeLock().lock();
         for(int i = 0; i < vnodes; i++)
         {
-            int hashcode = Objects.hash(address, i);
-            ring.put(hashcode, address);
+            ServerRecord vnode = new ServerRecord(address, port, i);
+            ring.put(vnode.getHash(), vnode);
         }
         lock.writeLock().unlock();
     }
@@ -63,15 +70,30 @@ public class ConsistentMap {
             throw new NoServersException();
         }
 
-        int hashcode = Arrays.hashCode(key);
+        long hashcode = getHash(key);
 
-        Map.Entry<Integer, ServerRecord> server = ring.ceilingEntry(hashcode);
+        Map.Entry<Long, ServerRecord> server = ring.ceilingEntry(hashcode);
         /* Deal with case where the successor of the key is past "0" */
         server = (server == null) ? ring.firstEntry(): server;
 
         lock.readLock().unlock();
 
         return server.getValue();
+    }
+
+    private long getHash(byte[] key) {
+        md5.reset();
+
+        byte[] dig = md5.digest(key);
+
+        long hash = (
+                (long) (dig[3] & 0xFF) << 24 |
+                (long) (dig[2] & 0xFF) << 16 |
+                (long) (dig[1] & 0xFF) << 8 |
+                (long) (dig[0] & 0xFF)
+                );
+
+        return hash;
     }
 
 public class NoServersException extends Exception {}

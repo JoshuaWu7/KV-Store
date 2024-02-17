@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 
 import static com.s82033788.CPEN431.A4.KVServer.self;
+import static com.s82033788.CPEN431.A4.KVServer.selfLoopback;
 import static com.s82033788.CPEN431.A4.cache.ResponseType.*;
 
 public class KVServerTaskHandler implements Runnable {
@@ -149,7 +150,7 @@ public class KVServerTaskHandler implements Runnable {
                 byte[] key = payload.getKey();
                 ServerRecord destination = serverRing.getServer(key);
 
-                if(!destination.equals(self))
+                if((!destination.equals(self)) && (!destination.equals(selfLoopback)))
                 {
                     // Set source so packet will be sent to correct sender.
                     unwrappedMessage.setSourceAddress(iPacket.getAddress());

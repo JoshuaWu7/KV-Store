@@ -3,14 +3,17 @@ package com.s82033788.CPEN431.A4;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.s82033788.CPEN431.A4.cache.RequestCacheKey;
+import com.s82033788.CPEN431.A4.consistentMap.ConsistentMap;
 import com.s82033788.CPEN431.A4.consistentMap.ServerRecord;
 import com.s82033788.CPEN431.A4.map.KeyWrapper;
 import com.s82033788.CPEN431.A4.map.ValueWrapper;
-import com.s82033788.CPEN431.A4.consistentMap.ConsistentMap;
 import net.openhft.chronicle.map.ChronicleMap;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -22,7 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class KVServer
 {
-    final static int PORT = 13788;
+    static int PORT = 13788;
     final static int N_THREADS = 4;
     static final int PACKET_MAX = 16384;
     final static long CACHE_EXPIRY = 1;
@@ -33,22 +36,21 @@ public class KVServer
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
-    final static ServerRecord self;
+    static ServerRecord self;
+    static ServerRecord selfLoopback;
 
-    static {
-        try {
-            self = new ServerRecord(InetAddress.getLocalHost(), PORT);
-        } catch (UnknownHostException e) {
-            System.err.println("Unable to get local address");
-            throw new RuntimeException(e);
-        }
-    }
 
     public static void main( String[] args )
     {
-
         try
         {
+
+           PORT = Integer.parseInt(args[0]);
+           self = new ServerRecord(InetAddress.getLocalHost(), PORT, 0);
+           selfLoopback = new ServerRecord(InetAddress.getLoopbackAddress(), PORT, 0);
+
+
+
             DatagramSocket server = new DatagramSocket(PORT);
             ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
 
