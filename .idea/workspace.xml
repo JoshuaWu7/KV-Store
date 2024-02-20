@@ -10,10 +10,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="fixed removeServer">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" afterDir="false" />
-    </list>
+    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="added the required fields for isDead message" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -33,7 +30,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="main" />
+        <entry key="$PROJECT_DIR$" value="a6" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -552,7 +549,15 @@
       <option name="project" value="LOCAL" />
       <updated>1708137420868</updated>
     </task>
-    <option name="localTasksCounter" value="28" />
+    <task id="LOCAL-00028" summary="added the required fields for isDead message">
+      <option name="closed" value="true" />
+      <created>1708472315936</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1708472315936</updated>
+    </task>
+    <option name="localTasksCounter" value="29" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -582,7 +587,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="get some basic logic done" />
     <MESSAGE value="dummy tests pass" />
     <MESSAGE value="minor optimizations" />
     <MESSAGE value="cleaning out commented code" />
@@ -607,7 +611,8 @@
     <MESSAGE value="refactor + md5 upgrade to 8 bytes." />
     <MESSAGE value="added scripts to autostart/kill nodes" />
     <MESSAGE value="fixed removeServer" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed removeServer" />
+    <MESSAGE value="added the required fields for isDead message" />
+    <option name="LAST_COMMIT_MESSAGE" value="added the required fields for isDead message" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
