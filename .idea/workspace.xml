@@ -10,9 +10,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="refactor + md5 upgrade to 8 bytes.">
-      <change afterPath="$PROJECT_DIR$/node_killer.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/node_starter.sh" afterDir="false" />
+    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="fixed removeServer">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -53,7 +53,7 @@
     <scope name="WrittenCode" pattern="(src:com.s82033788.CPEN431.A4..*||src:com.s82033788.CPEN431.A4.cache..*||src:com.s82033788.CPEN431.A4.map..*||src:com.s82033788.CPEN431.A4.wrappers..*)&amp;&amp;!src:com.s82033788.CPEN431.A4.proto..*" />
   </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="ProjectErrors" />
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 2
@@ -64,41 +64,42 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.KVServer.executor": "Coverage",
-    "Downloaded.Files.Path.Enabled": "false",
-    "JAR Application.Remote.executor": "Run",
-    "Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor": "Run",
-    "Maven.App.executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [clean].executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [install...].executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [install].executor": "Run",
-    "Maven.KVServer 13788.executor": "Run",
-    "Maven.KVServer 13789.executor": "Debug",
-    "Maven.KVServer.executor": "Run",
-    "Repository.Attach.Annotations": "false",
-    "Repository.Attach.JavaDocs": "false",
-    "Repository.Attach.Sources": "false",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "Shell Script.node_starter.sh.executor": "Run",
-    "git-widget-placeholder": "public-buffer-lockfix",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/home/beako/Documents/cpen431/cpen431_2024_a4_82033788",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Libraries",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2",
-    "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.KVServer.executor&quot;: &quot;Coverage&quot;,
+    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
+    &quot;JAR Application.Remote.executor&quot;: &quot;Run&quot;,
+    &quot;Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.App.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [install...].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [install].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.KVServer 13788.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.KVServer 13789.executor&quot;: &quot;Debug&quot;,
+    &quot;Maven.KVServer.executor&quot;: &quot;Run&quot;,
+    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;Shell Script.node_killer.sh.executor&quot;: &quot;Run&quot;,
+    &quot;Shell Script.node_starter.sh.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;public-buffer-lockfix&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/beako/Documents/cpen431/cpen431_2024_a4_82033788&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -118,7 +119,7 @@
       <command value="mvn clean" />
     </option>
   </component>
-  <component name="RunManager" selected="Shell Script.node_starter.sh">
+  <component name="RunManager" selected="Shell Script.node_killer.sh">
     <configuration name="KVServer 13788" type="Application" factoryName="Application" singleton="false">
       <option name="MAIN_CLASS_NAME" value="com.g7.CPEN431.A7.KVServer" />
       <module name="CPEN431_2024_A4_82033788" />
@@ -229,6 +230,21 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="node_killer.sh" type="ShConfigurationType" temporary="true">
+      <option name="SCRIPT_TEXT" value="" />
+      <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
+      <option name="SCRIPT_PATH" value="$PROJECT_DIR$/node_killer.sh" />
+      <option name="SCRIPT_OPTIONS" value="" />
+      <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
+      <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="INDEPENDENT_INTERPRETER_PATH" value="true" />
+      <option name="INTERPRETER_PATH" value="/bin/bash" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="EXECUTE_IN_TERMINAL" value="true" />
+      <option name="EXECUTE_SCRIPT_FILE" value="true" />
+      <envs />
+      <method v="2" />
+    </configuration>
     <configuration name="node_starter.sh" type="ShConfigurationType" temporary="true">
       <option name="SCRIPT_TEXT" value="" />
       <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
@@ -251,15 +267,16 @@
       <item itemvalue="JUnit.KVServerTest" />
       <item itemvalue="JUnit.KVServerTest.main" />
       <item itemvalue="JUnit.java in CPEN431_2024_A4_82033788" />
+      <item itemvalue="Shell Script.node_killer.sh" />
       <item itemvalue="Shell Script.node_starter.sh" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Shell Script.node_killer.sh" />
         <item itemvalue="Shell Script.node_starter.sh" />
         <item itemvalue="JUnit.KVServerTest.main" />
         <item itemvalue="JUnit.KVServerTest" />
         <item itemvalue="JUnit.java in CPEN431_2024_A4_82033788" />
-        <item itemvalue="JUnit.KVServerTest.main" />
       </list>
     </recent_temporary>
   </component>
@@ -317,6 +334,7 @@
       <workItem from="1707957355423" duration="10513000" />
       <workItem from="1707974669598" duration="192000" />
       <workItem from="1708119827647" duration="10034000" />
+      <workItem from="1708460381873" duration="25000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <option name="closed" value="true" />
@@ -518,7 +536,23 @@
       <option name="project" value="LOCAL" />
       <updated>1708133152631</updated>
     </task>
-    <option name="localTasksCounter" value="26" />
+    <task id="LOCAL-00026" summary="added scripts to autostart/kill nodes">
+      <option name="closed" value="true" />
+      <created>1708134728160</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1708134728160</updated>
+    </task>
+    <task id="LOCAL-00027" summary="fixed removeServer">
+      <option name="closed" value="true" />
+      <created>1708137420868</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1708137420868</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -548,7 +582,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="initial commit" />
     <MESSAGE value="get some basic logic done" />
     <MESSAGE value="dummy tests pass" />
     <MESSAGE value="minor optimizations" />
@@ -572,7 +605,9 @@
     <MESSAGE value="distributed works in spirit" />
     <MESSAGE value="patched the ascending map problem" />
     <MESSAGE value="refactor + md5 upgrade to 8 bytes." />
-    <option name="LAST_COMMIT_MESSAGE" value="refactor + md5 upgrade to 8 bytes." />
+    <MESSAGE value="added scripts to autostart/kill nodes" />
+    <MESSAGE value="fixed removeServer" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed removeServer" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

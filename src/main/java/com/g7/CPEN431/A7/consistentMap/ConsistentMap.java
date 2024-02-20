@@ -85,7 +85,7 @@ public class ConsistentMap {
 
         byte[] dig = md5.digest(key);
 
-        long hash = (
+        return (
                 (long) (dig[7] & 0xFF) << 56 |
                 (long) (dig[6] & 0xFF) << 48 |
                 (long) (dig[5] & 0xFF) << 40 |
@@ -95,11 +95,9 @@ public class ConsistentMap {
                 (long) (dig[1] & 0xFF) << 8 |
                 (long) (dig[0] & 0xFF)
                 );
-
-        return hash;
     }
 
-public class NoServersException extends Exception {}
+public static class NoServersException extends Exception {}
 
 }
 
