@@ -9,11 +9,16 @@ public class UnwrappedPayload implements KVRequest {
     private int command;
     private byte[] key;
     private byte[] value;
+    private byte[] serverAddress;
+    private int serverPort;
+    private long informationTime;
     private int version = 0; //defaults to zero anyways, no logic
 
     private boolean keyExists = false;
     private boolean valueExists = false;
     private boolean versionExists = false;
+    private boolean serverPortExists = false;
+    private boolean informationTimeExists = false;
 
     public UnwrappedPayload() {
     }
@@ -78,5 +83,52 @@ public class UnwrappedPayload implements KVRequest {
     public void setVersion(int version) {
         this.version = version;
         versionExists = true;
+    }
+
+    @Override
+    public boolean hasServerAddress() {
+        return serverAddress != null;
+    }
+
+    @Override
+    public byte[] getServerAddress() {
+        return serverAddress;
+    }
+
+    @Override
+    public void setServerAddress(byte[] serverAddress) {
+        this.serverAddress = serverAddress;
+    }
+
+    @Override
+    public boolean hasServerPort() {
+        return serverPortExists;
+    }
+
+    @Override
+    public int getServerPort() {
+        return this.serverPort;
+    }
+
+    @Override
+    public void setServerPort(int serverPort) {
+        this.serverPort = serverPort;
+        this.serverPortExists = true;
+    }
+
+    @Override
+    public boolean hasInformationTime() {
+        return this.informationTimeExists;
+    }
+
+    @Override
+    public long getInformationTime() {
+        return this.informationTime;
+    }
+
+    @Override
+    public void setInformationTime(long informationTime) {
+        this.informationTime = informationTime;
+        this.informationTimeExists = true;
     }
 }
