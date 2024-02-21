@@ -71,6 +71,11 @@ public class DeathRegistrar extends TimerTask {
             throw new IllegalStateException();
         }
 
+        if(deathRecord.size() == 0)
+        {
+            return;
+        }
+
         sender.setDestination(target.getAddress(), target.getServerPort());
         List<ServerEntry> l = new ArrayList<>(deathRecord.values());
         ServerResponse r;

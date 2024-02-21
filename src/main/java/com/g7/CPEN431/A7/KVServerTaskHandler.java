@@ -84,6 +84,8 @@ public class KVServerTaskHandler implements Runnable {
     public final static int REQ_CODE_ALI = 0X06;
     public final static int REQ_CODE_PID = 0X07;
     public final static int REQ_CODE_MEM = 0X08;
+    public final static int REQ_CODE_DED = 0x100;
+
 
     public final static int STAT_CODE_OK = 0x00;
     public final static int STAT_CODE_OLD = 0x01;
