@@ -38,10 +38,17 @@ public class KVServerTaskHandler implements Runnable {
     private final AtomicInteger bytesUsed;
     private final DatagramPacket iPacket;
     private final Cache<RequestCacheKey, DatagramPacket> requestCache;
+    /**
+     * This is synchronized. You must obtain the maplock's readlock (See KVServer for full explanation)
+     * if you wish to modify it. Wipeout obtains the writelock.
+     */
     private final ConcurrentMap<KeyWrapper, ValueWrapper> map;
     private final ReadWriteLock mapLock;
     private boolean responseSent = false;
     private PublicBuffer incomingPublicBuffer;
+    /**
+     * Consistent map is thread safe. (Internally synchronized with R/W lock)
+     */
     private ConsistentMap serverRing;
 
     final private ConcurrentLinkedQueue<byte[]> bytePool;  //this is thread safe

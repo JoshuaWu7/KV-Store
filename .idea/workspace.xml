@@ -10,9 +10,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="amended request message so we can send multiple server updates.">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="added a list of server response codes for each server update." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -107,8 +105,8 @@
       <recent name="$PROJECT_DIR$/src/main" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest" />
       <recent name="$PROJECT_DIR$/PROTOBUF" />
+      <recent name="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/newProto" />
       <recent name="$PROJECT_DIR$/src/main/resources" />
@@ -584,7 +582,15 @@
       <option name="project" value="LOCAL" />
       <updated>1708477006292</updated>
     </task>
-    <option name="localTasksCounter" value="32" />
+    <task id="LOCAL-00032" summary="added a list of server response codes for each server update.">
+      <option name="closed" value="true" />
+      <created>1708479583323</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1708479583323</updated>
+    </task>
+    <option name="localTasksCounter" value="33" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -614,7 +620,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="cleaning out commented code" />
     <MESSAGE value="Chronicles final worked" />
     <MESSAGE value="small refactoring" />
     <MESSAGE value="concurrency issues fix" />
@@ -639,7 +644,8 @@
     <MESSAGE value="added the required fields for isDead message" />
     <MESSAGE value="Added death registrar stub code" />
     <MESSAGE value="amended request message so we can send multiple server updates." />
-    <option name="LAST_COMMIT_MESSAGE" value="amended request message so we can send multiple server updates." />
+    <MESSAGE value="added a list of server response codes for each server update." />
+    <option name="LAST_COMMIT_MESSAGE" value="added a list of server response codes for each server update." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
