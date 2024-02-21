@@ -1,16 +1,17 @@
 package com.g7.CPEN431.A7.cache;
 
+import com.g7.CPEN431.A7.KVServerTaskHandler;
 import com.g7.CPEN431.A7.map.ValueWrapper;
 import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgSerializer;
 import com.g7.CPEN431.A7.newProto.KVResponse.KVResponse;
-import com.g7.CPEN431.A7.wrappers.PublicBuffer;
-import com.g7.CPEN431.A7.KVServerTaskHandler;
 import com.g7.CPEN431.A7.newProto.KVResponse.KVResponseSerializer;
+import com.g7.CPEN431.A7.wrappers.PublicBuffer;
 import com.g7.CPEN431.A7.wrappers.UnwrappedMessage;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.util.List;
 
 public class RequestCacheValue implements KVResponse {
     private final ResponseType responseType;
@@ -24,6 +25,7 @@ public class RequestCacheValue implements KVResponse {
     private final InetAddress address;
     private final int port;
     private final PublicBuffer pb;
+    private List<Integer> serverStatusCodes;
 
     private RequestCacheValue(Builder builder) {
         ResponseType type = builder.b_type;
@@ -88,6 +90,10 @@ public class RequestCacheValue implements KVResponse {
                 this.value = builder.b_value;
                 break;
             }
+            /* TODO: Add a builder for the case where you send the response to a obituary update (isDead) request
+            * You can use the serverStatusCode class variable
+            *
+             */
             default: throw new IllegalArgumentException();
         }
     }
@@ -141,6 +147,8 @@ public class RequestCacheValue implements KVResponse {
             this.b_value = value;
             return this;
         }
+
+        //TODO: Add a set server status code function
 
         public RequestCacheValue build() {
             return new RequestCacheValue(this);
@@ -271,6 +279,24 @@ public class RequestCacheValue implements KVResponse {
     @Override
     public void setMembershipCount(int membershipCount) {
         throw new RuntimeException("Responses are immutable");
+    }
+
+    /*
+    TODO: Have a glimpse of these so you know what they are doing.
+     */
+    @Override
+    public boolean hasServerStatusCode() {
+        return this.serverStatusCodes != null;
+    }
+
+    @Override
+    public List<Integer> getServerStatusCode() {
+        return this.serverStatusCodes;
+    }
+
+    @Override
+    public void setServerStatusCode(List<Integer> serverStatusCode) {
+        this.serverStatusCodes = serverStatusCode;
     }
 }
 

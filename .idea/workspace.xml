@@ -10,30 +10,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="Added death registrar stub code">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/ServerEntry.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/ServerEntryFactory.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/ServerEntrySerializer.java" afterDir="false" />
+    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="amended request message so we can send multiple server updates.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/cache/RequestCacheValue.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/cache/RequestCacheValue.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ServerRecord.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ServerRecord.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/CurrentCursor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/shared/CurrentCursor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsg.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsg/KVMsg.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsgFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsg/KVMsgFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsgSerializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsg/KVMsgSerializer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/KVRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequestFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/KVRequestFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequestSerializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/KVRequestSerializer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponse/KVResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponseFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponse/KVResponseFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponseSerializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponse/KVResponseSerializer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/MessageFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/shared/MessageFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/ProtobufInputStream.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/shared/ProtobufInputStream.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/ProtobufOutputStream.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/shared/ProtobufOutputStream.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/wrappers/UnwrappedMessage.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/wrappers/UnwrappedMessage.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/wrappers/UnwrappedPayload.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/wrappers/UnwrappedPayload.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -598,7 +576,15 @@
       <option name="project" value="LOCAL" />
       <updated>1708472588466</updated>
     </task>
-    <option name="localTasksCounter" value="31" />
+    <task id="LOCAL-00031" summary="amended request message so we can send multiple server updates.">
+      <option name="closed" value="true" />
+      <created>1708477006292</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1708477006292</updated>
+    </task>
+    <option name="localTasksCounter" value="32" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -628,7 +614,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="minor optimizations" />
     <MESSAGE value="cleaning out commented code" />
     <MESSAGE value="Chronicles final worked" />
     <MESSAGE value="small refactoring" />
@@ -653,7 +638,8 @@
     <MESSAGE value="fixed removeServer" />
     <MESSAGE value="added the required fields for isDead message" />
     <MESSAGE value="Added death registrar stub code" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added death registrar stub code" />
+    <MESSAGE value="amended request message so we can send multiple server updates." />
+    <option name="LAST_COMMIT_MESSAGE" value="amended request message so we can send multiple server updates." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
