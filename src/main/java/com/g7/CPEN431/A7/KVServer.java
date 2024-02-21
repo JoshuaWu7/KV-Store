@@ -114,6 +114,8 @@ public class KVServer
             /* Set up obituary list */
             ConcurrentLinkedQueue pendingRecordDeaths = new ConcurrentLinkedQueue();
 
+            /* TODO set up the timer */
+
             while(true){
 
                 Runtime r = Runtime.getRuntime();
