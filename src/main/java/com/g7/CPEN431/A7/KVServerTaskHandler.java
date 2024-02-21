@@ -54,6 +54,7 @@ public class KVServerTaskHandler implements Runnable {
     final private ConcurrentLinkedQueue<byte[]> bytePool;  //this is thread safe
     final private boolean isOverloaded;
     final private ConcurrentLinkedQueue<DatagramPacket> outbound;
+    final private ConcurrentLinkedQueue<ServerRecord>pendingRecordDeaths;
 
     /* Constants */
     final static int KEY_MAX_LEN = 32;
@@ -84,6 +85,9 @@ public class KVServerTaskHandler implements Runnable {
     public final static int REQ_CODE_PID = 0X07;
     public final static int REQ_CODE_MEM = 0X08;
 
+    public final static int STAT_CODE_OK = 0x00;
+    public final static int STAT_CODE_OLD = 0x01;
+
     public KVServerTaskHandler(DatagramPacket iPacket,
                                Cache<RequestCacheKey, DatagramPacket> requestCache,
                                ConcurrentMap<KeyWrapper, ValueWrapper> map,
@@ -92,7 +96,8 @@ public class KVServerTaskHandler implements Runnable {
                                ConcurrentLinkedQueue<byte[]> bytePool,
                                boolean isOverloaded,
                                ConcurrentLinkedQueue<DatagramPacket> outbound,
-                               ConsistentMap serverRing) {
+                               ConsistentMap serverRing,
+                               ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths) {
         this.iPacket = iPacket;
         this.requestCache = requestCache;
         this.map = map;
@@ -102,6 +107,7 @@ public class KVServerTaskHandler implements Runnable {
         this.isOverloaded = isOverloaded;
         this.outbound = outbound;
         this.serverRing = serverRing;
+        this.pendingRecordDeaths = pendingRecordDeaths;
     }
 
 
@@ -243,6 +249,7 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         //process the packet by request code
+        //TODO: Add the code to handle incoming death records.
         DatagramPacket res;
         switch(payload.getCommand())
         {
@@ -569,6 +576,18 @@ public class KVServerTaskHandler implements Runnable {
 
         return pkt;
     }
+
+    /**
+     * TODO: A function to handle incoming death requests. You may find pendingRecordDeaths useful. Dump them
+     * in the queue and I will forward them in the next round (and handle the rest of it.
+     * You should check that the issuance date is later than what the "ring" currently has. Also there are vnodes
+     * in the ring, so you gotta figure that out.
+     */
+    private DatagramPacket handleDeathUpdate(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
+    {
+        return null;
+    }
+
 
     // Custom Exceptions
 

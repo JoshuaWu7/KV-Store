@@ -5,7 +5,7 @@ import com.g7.CPEN431.A7.newProto.shared.MessageFactory;
 
 public class ServerEntryFactory implements MessageFactory {
     public Object create(String fullMessageName) {
-        if(fullMessageName.equals("ServerEntry")) return new ServerRecord();
+        if(fullMessageName.equals("ServerEntry")) return new ServerRecord(fullMessageName);
         throw new IllegalArgumentException("Unknown message name: " + fullMessageName);
     }
 }

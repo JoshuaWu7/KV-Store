@@ -10,7 +10,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="added a list of server response codes for each server update." />
+    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="comments on concurrency.">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/client/ServerResponse.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponse/ServerResponseFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/DeathRegistrar.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/DeathRegistrar.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ServerRecord.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ServerRecord.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/ServerEntryFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/ServerEntryFactory.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -111,13 +121,16 @@
       <recent name="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/newProto" />
       <recent name="$PROJECT_DIR$/src/main/resources" />
     </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="com.g7.CPEN431.A7.client" />
+    </key>
   </component>
   <component name="RunAnythingCache">
     <option name="myCommands">
       <command value="mvn clean" />
     </option>
   </component>
-  <component name="RunManager" selected="Shell Script.node_killer.sh">
+  <component name="RunManager" selected="Application.KVServer 13788">
     <configuration name="KVServer 13788" type="Application" factoryName="Application" singleton="false">
       <option name="MAIN_CLASS_NAME" value="com.g7.CPEN431.A7.KVServer" />
       <module name="CPEN431_2024_A4_82033788" />
@@ -590,7 +603,15 @@
       <option name="project" value="LOCAL" />
       <updated>1708479583323</updated>
     </task>
-    <option name="localTasksCounter" value="33" />
+    <task id="LOCAL-00033" summary="comments on concurrency.">
+      <option name="closed" value="true" />
+      <created>1708479897848</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1708479897848</updated>
+    </task>
+    <option name="localTasksCounter" value="34" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -620,7 +641,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Chronicles final worked" />
     <MESSAGE value="small refactoring" />
     <MESSAGE value="concurrency issues fix" />
     <MESSAGE value="implemented the public buffer for outgoing packets." />
@@ -645,7 +665,8 @@
     <MESSAGE value="Added death registrar stub code" />
     <MESSAGE value="amended request message so we can send multiple server updates." />
     <MESSAGE value="added a list of server response codes for each server update." />
-    <option name="LAST_COMMIT_MESSAGE" value="added a list of server response codes for each server update." />
+    <MESSAGE value="comments on concurrency." />
+    <option name="LAST_COMMIT_MESSAGE" value="comments on concurrency." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

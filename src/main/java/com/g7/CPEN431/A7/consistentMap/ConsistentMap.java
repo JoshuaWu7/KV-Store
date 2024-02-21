@@ -10,6 +10,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -70,6 +71,26 @@ public class ConsistentMap {
         }
 
         long hashcode = getHash(key);
+
+        Map.Entry<Long, ServerRecord> server = ring.ceilingEntry(hashcode);
+        /* Deal with case where the successor of the key is past "0" */
+        server = (server == null) ? ring.firstEntry(): server;
+
+        lock.readLock().unlock();
+
+        return server.getValue();
+    }
+
+    public ServerRecord getRandomServer() throws NoServersException
+    {
+        lock.readLock().lock();
+        if(ring.isEmpty())
+        {
+            lock.readLock().unlock();
+            throw new NoServersException();
+        }
+
+        long hashcode = new Random().nextLong();
 
         Map.Entry<Long, ServerRecord> server = ring.ceilingEntry(hashcode);
         /* Deal with case where the successor of the key is past "0" */

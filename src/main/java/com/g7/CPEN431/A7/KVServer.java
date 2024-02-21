@@ -112,8 +112,7 @@ public class KVServer
             ConsistentMap serverRing = new ConsistentMap(VNODE_COUNT, SERVER_LIST);
 
             /* Set up obituary list */
-
-
+            ConcurrentLinkedQueue pendingRecordDeaths = new ConcurrentLinkedQueue();
 
             while(true){
 
@@ -136,7 +135,8 @@ public class KVServer
                         bytePool,
                         isOverloaded,
                         outbound,
-                        serverRing));
+                        serverRing,
+                        pendingRecordDeaths));
             }
 
         } catch (SocketException e) {

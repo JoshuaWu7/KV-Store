@@ -42,7 +42,11 @@ public class ServerRecord implements ServerEntry {
         this.hash = genHash(hashBuf.array());
     }
 
-    public ServerRecord() {
+    /**
+     * This is not for you to fucking use. It is for the message parser.
+     */
+    public ServerRecord(String s) {
+        if(!s.equals("ServerEntry")) throw new IllegalArgumentException();
     }
 
     public InetAddress getAddress() {
