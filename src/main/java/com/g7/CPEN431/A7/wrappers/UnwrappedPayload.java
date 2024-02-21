@@ -1,6 +1,9 @@
 package com.g7.CPEN431.A7.wrappers;
 
-import com.g7.CPEN431.A7.newProto.KVRequest;
+import com.g7.CPEN431.A7.newProto.KVRequest.KVRequest;
+import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
+
+import java.util.List;
 
 /**
  * A class than encapsulates the payload of an incoming requrest. Self Explanatory.
@@ -9,16 +12,12 @@ public class UnwrappedPayload implements KVRequest {
     private int command;
     private byte[] key;
     private byte[] value;
-    private byte[] serverAddress;
-    private int serverPort;
-    private long informationTime;
     private int version = 0; //defaults to zero anyways, no logic
+    private List<ServerEntry> obituaryUpdates;
 
     private boolean keyExists = false;
     private boolean valueExists = false;
     private boolean versionExists = false;
-    private boolean serverPortExists = false;
-    private boolean informationTimeExists = false;
 
     public UnwrappedPayload() {
     }
@@ -86,49 +85,17 @@ public class UnwrappedPayload implements KVRequest {
     }
 
     @Override
-    public boolean hasServerAddress() {
-        return serverAddress != null;
+    public boolean hasServerRecord() {
+        return obituaryUpdates != null;
     }
 
     @Override
-    public byte[] getServerAddress() {
-        return serverAddress;
+    public List<ServerEntry> getServerRecord() {
+        return obituaryUpdates;
     }
 
     @Override
-    public void setServerAddress(byte[] serverAddress) {
-        this.serverAddress = serverAddress;
-    }
-
-    @Override
-    public boolean hasServerPort() {
-        return serverPortExists;
-    }
-
-    @Override
-    public int getServerPort() {
-        return this.serverPort;
-    }
-
-    @Override
-    public void setServerPort(int serverPort) {
-        this.serverPort = serverPort;
-        this.serverPortExists = true;
-    }
-
-    @Override
-    public boolean hasInformationTime() {
-        return this.informationTimeExists;
-    }
-
-    @Override
-    public long getInformationTime() {
-        return this.informationTime;
-    }
-
-    @Override
-    public void setInformationTime(long informationTime) {
-        this.informationTime = informationTime;
-        this.informationTimeExists = true;
+    public void setServerRecord(List<ServerEntry> serverRecord) {
+        this.obituaryUpdates = serverRecord;
     }
 }

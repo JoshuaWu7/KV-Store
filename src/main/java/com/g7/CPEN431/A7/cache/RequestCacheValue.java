@@ -1,11 +1,11 @@
 package com.g7.CPEN431.A7.cache;
 
 import com.g7.CPEN431.A7.map.ValueWrapper;
-import com.g7.CPEN431.A7.newProto.KVMsgSerializer;
-import com.g7.CPEN431.A7.newProto.KVResponse;
+import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgSerializer;
+import com.g7.CPEN431.A7.newProto.KVResponse.KVResponse;
 import com.g7.CPEN431.A7.wrappers.PublicBuffer;
 import com.g7.CPEN431.A7.KVServerTaskHandler;
-import com.g7.CPEN431.A7.newProto.KVResponseSerializer;
+import com.g7.CPEN431.A7.newProto.KVResponse.KVResponseSerializer;
 import com.g7.CPEN431.A7.wrappers.UnwrappedMessage;
 
 import java.io.IOException;

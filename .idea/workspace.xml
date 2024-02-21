@@ -10,7 +10,31 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="added the required fields for isDead message" />
+    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="Added death registrar stub code">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/ServerEntry.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/ServerEntryFactory.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/ServerEntrySerializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/cache/RequestCacheValue.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/cache/RequestCacheValue.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ServerRecord.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ServerRecord.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/CurrentCursor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/shared/CurrentCursor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsg.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsg/KVMsg.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsgFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsg/KVMsgFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsgSerializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVMsg/KVMsgSerializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/KVRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequestFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/KVRequestFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequestSerializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/KVRequestSerializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponse/KVResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponseFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponse/KVResponseFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponseSerializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponse/KVResponseSerializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/MessageFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/shared/MessageFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/ProtobufInputStream.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/shared/ProtobufInputStream.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/ProtobufOutputStream.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/shared/ProtobufOutputStream.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/wrappers/UnwrappedMessage.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/wrappers/UnwrappedMessage.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/wrappers/UnwrappedPayload.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/wrappers/UnwrappedPayload.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -61,42 +85,43 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.KVServer.executor&quot;: &quot;Coverage&quot;,
-    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
-    &quot;JAR Application.Remote.executor&quot;: &quot;Run&quot;,
-    &quot;Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.App.executor&quot;: &quot;Run&quot;,
-    &quot;Maven.CPEN431_2024_A4_82033788 [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.CPEN431_2024_A4_82033788 [install...].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.CPEN431_2024_A4_82033788 [install].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.KVServer 13788.executor&quot;: &quot;Run&quot;,
-    &quot;Maven.KVServer 13789.executor&quot;: &quot;Debug&quot;,
-    &quot;Maven.KVServer.executor&quot;: &quot;Run&quot;,
-    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
-    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
-    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;Shell Script.node_killer.sh.executor&quot;: &quot;Run&quot;,
-    &quot;Shell Script.node_starter.sh.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;public-buffer-lockfix&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/beako/Documents/cpen431/cpen431_2024_a4_82033788&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.KVServer.executor": "Coverage",
+    "Downloaded.Files.Path.Enabled": "false",
+    "JAR Application.Remote.executor": "Run",
+    "Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor": "Run",
+    "Maven.App.executor": "Run",
+    "Maven.CPEN431_2024_A4_82033788 [clean].executor": "Run",
+    "Maven.CPEN431_2024_A4_82033788 [install...].executor": "Run",
+    "Maven.CPEN431_2024_A4_82033788 [install].executor": "Run",
+    "Maven.CPEN431_2024_PROJECT_7 [install...].executor": "Run",
+    "Maven.KVServer 13788.executor": "Run",
+    "Maven.KVServer 13789.executor": "Debug",
+    "Maven.KVServer.executor": "Run",
+    "Repository.Attach.Annotations": "false",
+    "Repository.Attach.JavaDocs": "false",
+    "Repository.Attach.Sources": "false",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "Shell Script.node_killer.sh.executor": "Run",
+    "Shell Script.node_starter.sh.executor": "Run",
+    "git-widget-placeholder": "public-buffer-lockfix",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/home/beako/Documents/cpen431/cpen431_2024_a4_82033788",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Libraries",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "run.code.analysis.last.selected.profile": "pProject Default",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -104,11 +129,11 @@
       <recent name="$PROJECT_DIR$/src/main" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest" />
       <recent name="$PROJECT_DIR$/PROTOBUF" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/newProto" />
       <recent name="$PROJECT_DIR$/src/main/resources" />
-      <recent name="$PROJECT_DIR$/src/main/java/com/s82033788/CPEN431/A4/proto" />
     </key>
   </component>
   <component name="RunAnythingCache">
@@ -557,7 +582,23 @@
       <option name="project" value="LOCAL" />
       <updated>1708472315936</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="added the required fields for isDead message">
+      <option name="closed" value="true" />
+      <created>1708472342766</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1708472342766</updated>
+    </task>
+    <task id="LOCAL-00030" summary="Added death registrar stub code">
+      <option name="closed" value="true" />
+      <created>1708472588466</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1708472588466</updated>
+    </task>
+    <option name="localTasksCounter" value="31" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -574,7 +615,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="a6" />
+                        <option value="main" />
                       </list>
                     </value>
                   </entry>
@@ -587,7 +628,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="dummy tests pass" />
     <MESSAGE value="minor optimizations" />
     <MESSAGE value="cleaning out commented code" />
     <MESSAGE value="Chronicles final worked" />
@@ -612,7 +652,8 @@
     <MESSAGE value="added scripts to autostart/kill nodes" />
     <MESSAGE value="fixed removeServer" />
     <MESSAGE value="added the required fields for isDead message" />
-    <option name="LAST_COMMIT_MESSAGE" value="added the required fields for isDead message" />
+    <MESSAGE value="Added death registrar stub code" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added death registrar stub code" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

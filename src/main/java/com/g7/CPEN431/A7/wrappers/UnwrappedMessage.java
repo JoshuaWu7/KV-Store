@@ -1,7 +1,7 @@
 package com.g7.CPEN431.A7.wrappers;
 
-import com.g7.CPEN431.A7.newProto.KVMsg;
-import com.g7.CPEN431.A7.newProto.KVMsgSerializer;
+import com.g7.CPEN431.A7.newProto.KVMsg.KVMsg;
+import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgSerializer;
 import com.g7.CPEN431.A7.consistentMap.ServerRecord;
 
 import java.net.DatagramPacket;

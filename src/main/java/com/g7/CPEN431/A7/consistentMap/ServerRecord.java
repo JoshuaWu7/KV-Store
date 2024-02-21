@@ -1,19 +1,35 @@
 package com.g7.CPEN431.A7.consistentMap;
 
+import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
+
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.Objects;
 
-public class ServerRecord {
+public class ServerRecord implements ServerEntry {
     private InetAddress address;
     private int port;
     private long hash;
+    private long informationTime;
+    private int updateCode;
+
+
+    private boolean portExists = false;
+    private boolean informationTimeExists = false;
+    private boolean updateCodeExists = false;
 
     public ServerRecord(InetAddress address, int port, int vnode_id) {
         this.address = address;
         this.port = port;
+        this.portExists = true;
+        this.informationTime = Instant.now().toEpochMilli();
+        this.informationTimeExists = true;
+        this.updateCode = 1;
+        this.updateCodeExists = true;
 
         byte[] adr = address.getAddress();
 
@@ -24,6 +40,9 @@ public class ServerRecord {
         hashBuf.flip();
 
         this.hash = genHash(hashBuf.array());
+    }
+
+    public ServerRecord() {
     }
 
     public InetAddress getAddress() {
@@ -76,6 +95,72 @@ public class ServerRecord {
     @Override
     public int hashCode() {
         return Objects.hash(address, port);
+    }
+
+    @Override
+    public boolean hasServerAddress() {
+        return address != null;
+    }
+
+    @Override
+    public byte[] getServerAddress() {
+        return address.getAddress();
+    }
+
+    @Override
+    public void setServerAddress(byte[] serverAddress) {
+        try {
+            this.address = InetAddress.getByAddress(serverAddress);
+        } catch (UnknownHostException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    @Override
+    public boolean hasServerPort() {
+        return this.portExists;
+    }
+
+    @Override
+    public int getServerPort() {
+        return this.port;
+    }
+
+    @Override
+    public void setServerPort(int serverPort) {
+        this.port = serverPort;
+        this.portExists = true;
+    }
+
+    @Override
+    public boolean hasInformationTime() {
+        return this.informationTimeExists;
+    }
+
+    @Override
+    public long getInformationTime() {
+        return this.informationTime;
+    }
+
+    @Override
+    public void setInformationTime(long informationTime) {
+        this.informationTime = informationTime;
+        this.informationTimeExists = true;
+    }
+
+    @Override
+    public boolean hasCode() {
+        return updateCodeExists;
+    }
+
+    @Override
+    public int getCode() {
+        return updateCode;
+    }
+
+    @Override
+    public void setCode(int code) {
+        this.updateCode = code;
     }
 
     public class HashNotGeneratedException extends Exception {}

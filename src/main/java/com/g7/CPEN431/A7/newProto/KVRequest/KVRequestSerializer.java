@@ -1,4 +1,10 @@
-package com.g7.CPEN431.A7.newProto;
+package com.g7.CPEN431.A7.newProto.KVRequest;
+
+import com.g7.CPEN431.A7.newProto.shared.CurrentCursor;
+import com.g7.CPEN431.A7.newProto.shared.MessageFactory;
+import com.g7.CPEN431.A7.newProto.shared.ProtobufInputStream;
+import com.g7.CPEN431.A7.newProto.shared.ProtobufOutputStream;
+
 public final class KVRequestSerializer {
 public static byte[] serialize(KVRequest message) {
 try {
@@ -20,16 +26,17 @@ totalSize += ProtobufOutputStream.computeRawVarint32Size(message.getValue().leng
 if (message.hasVersion()) {
 totalSize += ProtobufOutputStream.computeInt32Size(4, message.getVersion());
 }
-if (message.hasServerAddress()) {
-totalSize += message.getServerAddress().length;
-totalSize += ProtobufOutputStream.computeTagSize(100);
-totalSize += ProtobufOutputStream.computeRawVarint32Size(message.getServerAddress().length);
+byte[] serverRecordBuffer = null;
+if (message.hasServerRecord()) {
+java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+for( int i=0;i<message.getServerRecord().size();i++) {
+byte[] curMessageData = ServerEntrySerializer.serialize(message.getServerRecord().get(i));
+ProtobufOutputStream.writeMessageTag(100, baos);
+ProtobufOutputStream.writeRawVarint32(curMessageData.length, baos);
+baos.write(curMessageData);
 }
-if (message.hasServerPort()) {
-totalSize += ProtobufOutputStream.computeUint32Size(101, message.getServerPort());
-}
-if (message.hasInformationTime()) {
-totalSize += ProtobufOutputStream.computeUint64Size(102, message.getInformationTime());
+serverRecordBuffer = baos.toByteArray();
+totalSize += serverRecordBuffer.length;
 }
 final byte[] result = new byte[totalSize];
 int position = 0;
@@ -45,14 +52,8 @@ position = ProtobufOutputStream.writeBytes(3, message.getValue(), result, positi
 if (message.hasVersion()) {
 position = ProtobufOutputStream.writeInt32(4, message.getVersion(), result, position);
 }
-if (message.hasServerAddress()) {
-position = ProtobufOutputStream.writeBytes(100, message.getServerAddress(), result, position);
-}
-if (message.hasServerPort()) {
-position = ProtobufOutputStream.writeUint32(101, message.getServerPort(), result, position);
-}
-if (message.hasInformationTime()) {
-position = ProtobufOutputStream.writeUint64(102, message.getInformationTime(), result, position);
+if (message.hasServerRecord()) {
+position = ProtobufOutputStream.writeRawBytes(serverRecordBuffer, result, position);
 }
 ProtobufOutputStream.checkNoSpaceLeft(result, position);
 return result;
@@ -75,14 +76,13 @@ ProtobufOutputStream.writeBytes(3, message.getValue(), os);
 if (message.hasVersion()) {
 ProtobufOutputStream.writeInt32(4, message.getVersion(), os);
 }
-if (message.hasServerAddress()) {
-ProtobufOutputStream.writeBytes(100, message.getServerAddress(), os);
+if (message.hasServerRecord()) {
+for( int i=0;i<message.getServerRecord().size();i++) {
+byte[] curMessageData = ServerEntrySerializer.serialize(message.getServerRecord().get(i));
+ProtobufOutputStream.writeMessageTag(100, os);
+ProtobufOutputStream.writeRawVarint32(curMessageData.length, os);
+os.write(curMessageData);
 }
-if (message.hasServerPort()) {
-ProtobufOutputStream.writeUint32(101, message.getServerPort(), os);
-}
-if (message.hasInformationTime()) {
-ProtobufOutputStream.writeUint64(102, message.getInformationTime(), os);
 }
 } catch (java.io.IOException e) {
 throw new RuntimeException("Serializing to a byte array threw an IOException (should never happen).", e);
@@ -128,13 +128,12 @@ case 4:
 message.setVersion(ProtobufInputStream.readInt32(data,cursor));
 break;
 case 100: 
-message.setServerAddress(ProtobufInputStream.readBytes(data,cursor));
-break;
-case 101: 
-message.setServerPort(ProtobufInputStream.readUint32(data,cursor));
-break;
-case 102: 
-message.setInformationTime(ProtobufInputStream.readUint64(data,cursor));
+if( message.getServerRecord() == null || message.getServerRecord().isEmpty()) {
+message.setServerRecord(new java.util.ArrayList<ServerEntry>());
+}
+int lengthServerRecord = ProtobufInputStream.readRawVarint32(data,cursor);
+message.getServerRecord().add(ServerEntrySerializer.parseFrom(factory, data, cursor.getCurrentPosition(), lengthServerRecord));
+cursor.addToPosition(lengthServerRecord);
 break;
 }
 }
@@ -182,13 +181,12 @@ case 4:
 message.setVersion(ProtobufInputStream.readInt32(is,cursor));
 break;
 case 100: 
-message.setServerAddress(ProtobufInputStream.readBytes(is,cursor));
-break;
-case 101: 
-message.setServerPort(ProtobufInputStream.readUint32(is,cursor));
-break;
-case 102: 
-message.setInformationTime(ProtobufInputStream.readUint64(is,cursor));
+if( message.getServerRecord() == null || message.getServerRecord().isEmpty()) {
+message.setServerRecord(new java.util.ArrayList<ServerEntry>());
+}
+int lengthServerRecord = ProtobufInputStream.readRawVarint32(is,cursor);
+message.getServerRecord().add(ServerEntrySerializer.parseFrom(factory, is, cursor.getCurrentPosition(), lengthServerRecord));
+cursor.addToPosition(lengthServerRecord);
 break;
 }
 }

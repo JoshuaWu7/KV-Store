@@ -1,4 +1,9 @@
-package com.g7.CPEN431.A7.newProto;
+package com.g7.CPEN431.A7.newProto.KVResponse;
+
+import com.g7.CPEN431.A7.newProto.shared.CurrentCursor;
+import com.g7.CPEN431.A7.newProto.shared.MessageFactory;
+import com.g7.CPEN431.A7.newProto.shared.ProtobufInputStream;
+import com.g7.CPEN431.A7.newProto.shared.ProtobufOutputStream;
 
 public final class KVResponseSerializer {
 public static byte[] serialize(KVResponse message) {

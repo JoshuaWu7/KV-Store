@@ -111,6 +111,9 @@ public class KVServer
             /* Set up the list of servers */
             ConsistentMap serverRing = new ConsistentMap(VNODE_COUNT, SERVER_LIST);
 
+            /* Set up obituary list */
+
+
 
             while(true){
 
