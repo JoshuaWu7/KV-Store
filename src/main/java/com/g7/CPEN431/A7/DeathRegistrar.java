@@ -42,7 +42,7 @@ public class DeathRegistrar extends TimerTask {
         {
             ServerRecord existing = deathRecord.get(n);
 
-            if(!existing.hasInformationTime() || !n.hasInformationTime())
+            if((existing != null && !existing.hasInformationTime()) || !n.hasInformationTime())
             {
                 throw new IllegalStateException("Broadcast message has no information time");
             }
