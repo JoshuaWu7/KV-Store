@@ -71,7 +71,7 @@ public class DeathRegistrar extends TimerTask {
             throw new IllegalStateException();
         }
 
-        if(deathRecord.size() == 0)
+        if(deathRecord.isEmpty())
         {
             return;
         }
@@ -96,6 +96,7 @@ public class DeathRegistrar extends TimerTask {
         if(!r.hasServerStatusCode())
         {
             System.err.println("Gossip recipient did not return list of status codes");
+            return;
         }
 
         List<Integer> responses = r.getServerStatusCode();
@@ -103,6 +104,7 @@ public class DeathRegistrar extends TimerTask {
         if(responses.size() != l.size())
         {
             System.err.println("Gossip recipient's status size is not the same");
+            return;
         }
 
         for(int i = 0; i < l.size(); i++)
@@ -110,7 +112,7 @@ public class DeathRegistrar extends TimerTask {
             if(responses.get(i) == KVServerTaskHandler.STAT_CODE_OLD && random.nextInt(K) == 0)
             {
                 //delete the response
-                deathRecord.remove(l.get(i));
+                deathRecord.remove( (ServerRecord) l.get(i));
                 //TODO additional logic to store old "news" that is recirculating. probably let vanessa do this.
             }
         }
