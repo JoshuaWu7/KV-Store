@@ -10,16 +10,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="comments on concurrency.">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/client/ServerResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVResponse/ServerResponseFactory.java" afterDir="false" />
+    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="added todo">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/DeathRegistrar.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/DeathRegistrar.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ServerRecord.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ServerRecord.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/ServerEntryFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/newProto/KVRequest/ServerEntryFactory.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,43 +64,43 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.KVServer.executor": "Coverage",
-    "Downloaded.Files.Path.Enabled": "false",
-    "JAR Application.Remote.executor": "Run",
-    "Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor": "Run",
-    "Maven.App.executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [clean].executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [install...].executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [install].executor": "Run",
-    "Maven.CPEN431_2024_PROJECT_7 [install...].executor": "Run",
-    "Maven.KVServer 13788.executor": "Run",
-    "Maven.KVServer 13789.executor": "Debug",
-    "Maven.KVServer.executor": "Run",
-    "Repository.Attach.Annotations": "false",
-    "Repository.Attach.JavaDocs": "false",
-    "Repository.Attach.Sources": "false",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "Shell Script.node_killer.sh.executor": "Run",
-    "Shell Script.node_starter.sh.executor": "Run",
-    "git-widget-placeholder": "public-buffer-lockfix",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/home/beako/Documents/cpen431/cpen431_2024_a4_82033788",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Libraries",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2",
-    "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.KVServer.executor&quot;: &quot;Coverage&quot;,
+    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
+    &quot;JAR Application.Remote.executor&quot;: &quot;Run&quot;,
+    &quot;Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.App.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [install...].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [install].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_PROJECT_7 [install...].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.KVServer 13788.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.KVServer 13789.executor&quot;: &quot;Debug&quot;,
+    &quot;Maven.KVServer.executor&quot;: &quot;Run&quot;,
+    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;Shell Script.node_killer.sh.executor&quot;: &quot;Run&quot;,
+    &quot;Shell Script.node_starter.sh.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;public-buffer-lockfix&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/beako/Documents/cpen431/cpen431_2024_a4_82033788&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -131,25 +124,10 @@
     </option>
   </component>
   <component name="RunManager" selected="Application.KVServer 13788">
-    <configuration name="KVServer 13788" type="Application" factoryName="Application" singleton="false">
+    <configuration name="KVServer 13788" type="Application" factoryName="Application" singleton="true">
       <option name="MAIN_CLASS_NAME" value="com.g7.CPEN431.A7.KVServer" />
       <module name="CPEN431_2024_A4_82033788" />
       <option name="PROGRAM_PARAMETERS" value="13788" />
-      <option name="VM_PARAMETERS" value="-XX:+UseCompressedOops -Xmx64m --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED --add-opens=jdk.compiler/com.sun.tools.javac=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.s82033788.CPEN431.A4.map.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="KVServer 13789" type="Application" factoryName="Application" singleton="false">
-      <option name="MAIN_CLASS_NAME" value="com.g7.CPEN431.A7.KVServer" />
-      <module name="CPEN431_2024_A4_82033788" />
-      <option name="PROGRAM_PARAMETERS" value="13789" />
       <option name="VM_PARAMETERS" value="-XX:+UseCompressedOops -Xmx64m --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED --add-opens=jdk.compiler/com.sun.tools.javac=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED" />
       <extension name="coverage">
         <pattern>
@@ -272,7 +250,6 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Application.KVServer 13789" />
       <item itemvalue="Application.KVServer 13788" />
       <item itemvalue="JAR Application.Remote 13788" />
       <item itemvalue="JUnit.KVServerTest" />
@@ -346,6 +323,8 @@
       <workItem from="1707974669598" duration="192000" />
       <workItem from="1708119827647" duration="10034000" />
       <workItem from="1708460381873" duration="25000" />
+      <workItem from="1708645149826" duration="702000" />
+      <workItem from="1708707162665" duration="1099000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <option name="closed" value="true" />
@@ -611,7 +590,31 @@
       <option name="project" value="LOCAL" />
       <updated>1708479897848</updated>
     </task>
-    <option name="localTasksCounter" value="34" />
+    <task id="LOCAL-00034" summary="my part is ok, though need some cleaning up and integration.">
+      <option name="closed" value="true" />
+      <created>1708489617022</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1708489617022</updated>
+    </task>
+    <task id="LOCAL-00035" summary="error checking + codes.">
+      <option name="closed" value="true" />
+      <created>1708490341773</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1708490341773</updated>
+    </task>
+    <task id="LOCAL-00036" summary="added todo">
+      <option name="closed" value="true" />
+      <created>1708490473338</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1708490473338</updated>
+    </task>
+    <option name="localTasksCounter" value="37" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -641,9 +644,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="small refactoring" />
-    <MESSAGE value="concurrency issues fix" />
-    <MESSAGE value="implemented the public buffer for outgoing packets." />
     <MESSAGE value="fixed the deadlock problem" />
     <MESSAGE value="clean up exception code" />
     <MESSAGE value="fixed some correctness bugs" />
@@ -666,7 +666,10 @@
     <MESSAGE value="amended request message so we can send multiple server updates." />
     <MESSAGE value="added a list of server response codes for each server update." />
     <MESSAGE value="comments on concurrency." />
-    <option name="LAST_COMMIT_MESSAGE" value="comments on concurrency." />
+    <MESSAGE value="my part is ok, though need some cleaning up and integration." />
+    <MESSAGE value="error checking + codes." />
+    <MESSAGE value="added todo" />
+    <option name="LAST_COMMIT_MESSAGE" value="added todo" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

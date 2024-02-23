@@ -1,12 +1,12 @@
 package com.g7.CPEN431.A7;
 
+import com.g7.CPEN431.A7.cache.RequestCacheKey;
 import com.g7.CPEN431.A7.consistentMap.ConsistentMap;
+import com.g7.CPEN431.A7.consistentMap.ServerRecord;
 import com.g7.CPEN431.A7.map.KeyWrapper;
 import com.g7.CPEN431.A7.map.ValueWrapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.g7.CPEN431.A7.cache.RequestCacheKey;
-import com.g7.CPEN431.A7.consistentMap.ServerRecord;
 import net.openhft.chronicle.map.ChronicleMap;
 
 import java.io.IOException;
@@ -25,6 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class KVServer
 {
+    /* Default port, overwritten by cmd line */
     static int PORT = 13788;
     final static int N_THREADS = 4;
     static final int PACKET_MAX = 16384;
@@ -112,7 +113,7 @@ public class KVServer
             ConsistentMap serverRing = new ConsistentMap(VNODE_COUNT, SERVER_LIST);
 
             /* Set up obituary list */
-            ConcurrentLinkedQueue pendingRecordDeaths = new ConcurrentLinkedQueue();
+            ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths = new ConcurrentLinkedQueue();
 
             /* TODO set up the timer */
 
