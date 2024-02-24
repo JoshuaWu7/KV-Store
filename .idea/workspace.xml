@@ -10,8 +10,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="updated error handling">
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/DeathRegistrar.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/DeathRegistrar.java" afterDir="false" />
+    <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="additional fixes wrt error checking">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,7 +54,7 @@
     <scope name="WrittenCode" pattern="(src:com.s82033788.CPEN431.A4..*||src:com.s82033788.CPEN431.A4.cache..*||src:com.s82033788.CPEN431.A4.map..*||src:com.s82033788.CPEN431.A4.wrappers..*)&amp;&amp;!src:com.s82033788.CPEN431.A4.proto..*" />
   </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="ProjectErrors" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 2
@@ -323,7 +325,8 @@
       <workItem from="1708119827647" duration="10034000" />
       <workItem from="1708460381873" duration="25000" />
       <workItem from="1708645149826" duration="702000" />
-      <workItem from="1708707162665" duration="2766000" />
+      <workItem from="1708707162665" duration="3398000" />
+      <workItem from="1708735204862" duration="3691000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <option name="closed" value="true" />
@@ -629,7 +632,15 @@
       <option name="project" value="LOCAL" />
       <updated>1708710821107</updated>
     </task>
-    <option name="localTasksCounter" value="39" />
+    <task id="LOCAL-00039" summary="additional fixes wrt error checking">
+      <option name="closed" value="true" />
+      <created>1708711499971</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1708711499971</updated>
+    </task>
+    <option name="localTasksCounter" value="40" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -659,7 +670,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="fixed some correctness bugs" />
     <MESSAGE value="dedicate thread to sending" />
     <MESSAGE value="switch to protobuf alt impl." />
     <MESSAGE value="Added log" />
@@ -684,7 +694,8 @@
     <MESSAGE value="added todo" />
     <MESSAGE value="remove allow multiple instances" />
     <MESSAGE value="updated error handling" />
-    <option name="LAST_COMMIT_MESSAGE" value="updated error handling" />
+    <MESSAGE value="additional fixes wrt error checking" />
+    <option name="LAST_COMMIT_MESSAGE" value="additional fixes wrt error checking" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

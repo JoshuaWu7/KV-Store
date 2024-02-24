@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -184,6 +185,10 @@ public class KVServerTaskHandler implements Runnable {
             System.err.println("There are no servers in the server ring");
             System.err.println("Doing nothing");
             return;
+        } catch (NoSuchAlgorithmException e) {
+           System.err.println("Could not generate hash");
+           System.err.println("Doing nothing");
+           return;
         }
 
 

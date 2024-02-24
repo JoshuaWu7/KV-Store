@@ -19,13 +19,11 @@ public class ConsistentMap {
     private final TreeMap<Long , ServerRecord> ring;
     private final int vnodes;
     private final ReadWriteLock lock;
-    private final MessageDigest md5;
 
-    public ConsistentMap(int vnodes, String serverPathName) throws IOException, NoSuchAlgorithmException {
+    public ConsistentMap(int vnodes, String serverPathName) throws IOException  {
         this.ring = new TreeMap<>();
         this.vnodes = vnodes;
         this.lock = new ReentrantReadWriteLock();
-        this.md5 = MessageDigest.getInstance("MD5");
 
         Path path = Paths.get(serverPathName);
         List<String> serverList = Files.readAllLines(path , StandardCharsets.UTF_8);
@@ -62,7 +60,7 @@ public class ConsistentMap {
         lock.writeLock().unlock();
     }
 
-    public ServerRecord getServer(byte[] key) throws NoServersException {
+    public ServerRecord getServer(byte[] key) throws NoServersException, NoSuchAlgorithmException {
         lock.readLock().lock();
         if(ring.isEmpty())
         {
@@ -101,9 +99,8 @@ public class ConsistentMap {
         return server.getValue();
     }
 
-    private long getHash(byte[] key) {
-        md5.reset();
-
+    private long getHash(byte[] key) throws NoSuchAlgorithmException {
+        MessageDigest md5 = MessageDigest.getInstance("MD5");
         byte[] dig = md5.digest(key);
 
         return (
