@@ -174,6 +174,7 @@ public class KVServerTaskHandler implements Runnable {
                 if((!destination.equals(self)) && (!destination.equals(selfLoopback)))
                 {
                     // Set source so packet will be sent to correct sender.
+                    System.out.println("forwarded!");
                     unwrappedMessage.setSourceAddress(iPacket.getAddress());
                     unwrappedMessage.setSourcePort(iPacket.getPort());
                     DatagramPacket p = unwrappedMessage.generatePacket(destination);
@@ -190,6 +191,8 @@ public class KVServerTaskHandler implements Runnable {
            System.err.println("Doing nothing");
            return;
         }
+
+        System.out.println("not forwarded");
 
 
         /* Prepare scaffolding for response */
@@ -212,6 +215,7 @@ public class KVServerTaskHandler implements Runnable {
             System.err.println("Could not parse the forwarding address. Doing nothing");
             return;
         }
+
 
 
         /* Requests here can be handled locally */

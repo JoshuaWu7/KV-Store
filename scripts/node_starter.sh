@@ -1,8 +1,11 @@
 #!/bin/bash
 
-SERVER_COUNT=4
+SERVER_COUNT=5
 START_PORT=13788
 END_PORT=$(($START_PORT + $SERVER_COUNT - 1))
+
+cd serverjar
+
 
 for i in $(seq $START_PORT $END_PORT);
 do
@@ -19,6 +22,9 @@ do
   --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
   --add-opens=java.base/java.io=ALL-UNNAMED \
   --add-opens=java.base/java.util=ALL-UNNAMED \
-  -jar target/CPEN431_2024_PROJECT_7-1.0-SNAPSHOT-jar-with-dependencies.jar \
+  -jar A6.jar \
   $i &
 done
+echo "Server creation complete"
+
+logout

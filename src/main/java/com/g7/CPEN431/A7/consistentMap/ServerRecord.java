@@ -63,13 +63,19 @@ public class ServerRecord implements ServerEntry {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
+
         ServerRecord that = (ServerRecord) o;
 
-        boolean res = port == that.port && this.address.equals(that.address);
-
-        return port == that.port && this.address.equals(that.address);
+        if (port != that.port) return false;
+        return address.equals(that.address);
     }
 
+    @Override
+    public int hashCode() {
+        int result = address.hashCode();
+        result = 31 * result + port;
+        return result;
+    }
 
     private long genHash(byte[] key) {
         MessageDigest md5 = null;
@@ -94,11 +100,6 @@ public class ServerRecord implements ServerEntry {
         );
 
         return hash;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(address, port);
     }
 
     @Override
