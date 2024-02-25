@@ -17,5 +17,7 @@ public enum ResponseType {
     NO_KEY,
     NO_MEM,
     OVERLOAD_CACHE,
-    OVERLOAD_THREAD
+    OVERLOAD_THREAD,
+    OLD_NEWS,
+    NEWS
 }

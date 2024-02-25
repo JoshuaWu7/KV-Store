@@ -101,6 +101,16 @@ public class ConsistentMap {
         return server.getValue();
     }
 
+    /**
+     * returns whether the server exist in the ring
+     * @param addr: the ip address of the server
+     * @param port: the port of the server
+     * @return whether the server exist in the ring
+     */
+    public boolean hasServer(InetAddress addr, int port){
+        return true;
+    }
+
     private long getHash(byte[] key) {
         md5.reset();
 

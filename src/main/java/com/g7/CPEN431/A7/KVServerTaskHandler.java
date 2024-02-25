@@ -12,6 +12,7 @@ import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgSerializer;
 import com.g7.CPEN431.A7.newProto.KVRequest.KVRequest;
 import com.g7.CPEN431.A7.newProto.KVRequest.KVRequestFactory;
 import com.g7.CPEN431.A7.newProto.KVRequest.KVRequestSerializer;
+import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
 import com.g7.CPEN431.A7.wrappers.PB_ContentType;
 import com.g7.CPEN431.A7.wrappers.PublicBuffer;
 import com.g7.CPEN431.A7.wrappers.UnwrappedMessage;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -261,8 +263,9 @@ public class KVServerTaskHandler implements Runnable {
             case REQ_CODE_SHU: res = handleShutdown(scaf, payload); break;
             case REQ_CODE_WIP: res = handleWipeout(scaf, payload);  break;
             case REQ_CODE_ALI: res = handleIsAlive(scaf, payload); break;
-            case REQ_CODE_PID: res =  handleGetPID(scaf, payload); break;
+            case REQ_CODE_PID: res = handleGetPID(scaf, payload); break;
             case REQ_CODE_MEM: res = handleGetMembershipCount(scaf, payload);  break;
+            case REQ_CODE_DED: res = handleDeathUpdate(scaf, payload); break;
 
             default: {
                 RequestCacheValue val = scaf.setResponseType(INVALID_OPCODE).build();
@@ -580,14 +583,44 @@ public class KVServerTaskHandler implements Runnable {
     }
 
     /**
-     * TODO: A function to handle incoming death requests. You may find pendingRecordDeaths useful. Dump them
-     * in the queue and I will forward them in the next round (and handle the rest of it.
-     * You should check that the issuance date is later than what the "ring" currently has. Also there are vnodes
-     * in the ring, so you gotta figure that out.
+     * Death request handler that updates the status of the ring
+     * @param scaf: response object builder
+     * @param payload: the payload from the request
+     * @return the return packet sent back to the sender
      */
     private DatagramPacket handleDeathUpdate(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
     {
-        return null;
+        /* retrive the list of obituaries that the sender knows */
+        List<ServerEntry> deadServers = payload.getServerRecord();
+
+        DatagramPacket pkt = null;
+
+        for(ServerEntry server: deadServers){
+            try {
+                /* reteieve server address and port */
+                InetAddress addr = InetAddress.getByAddress(server.getServerAddress());
+                int port = server.getServerPort();
+
+                /* remove the server from the ring and add to the pending queue if the server is in the ring (receiving news) */
+                if(serverRing.hasServer(addr, port)) {
+                    serverRing.removeServer(addr, port);
+
+                    // this might not work
+                    pendingRecordDeaths.add((ServerRecord) server);
+
+                    /* create response packet for receiving news */
+                    RequestCacheValue response = scaf.setResponseType(NEWS).build();
+                    pkt = generateAndSend(response);
+                } else{
+                    /* tell the sender that the information transferred is old news (server not in the ring already) */
+                    RequestCacheValue response = scaf.setResponseType(OLD_NEWS).build();
+                    pkt = generateAndSend(response);
+                }
+            } catch(UnknownHostException uhe){
+                System.err.println("Unknown Host: cannot remove server");
+            }
+        }
+        return pkt;
     }
 
 

@@ -11,8 +11,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aa5b750f-3817-40da-9bf9-8b03b0642e37" name="Changes" comment="updated error handling">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/tests/ExampleTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/KVServerTaskHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/cache/RequestCacheValue.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/cache/RequestCacheValue.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/cache/ResponseType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/cache/ResponseType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/g7/CPEN431/A7/consistentMap/ConsistentMap.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -88,6 +91,7 @@
     "Shell Script.node_killer.sh.executor": "Run",
     "Shell Script.node_starter.sh.executor": "Run",
     "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/home/beako/Documents/cpen431/cpen431_2024_a4_82033788",
     "node.js.detected.package.eslint": "true",
@@ -335,6 +339,8 @@
       <workItem from="1708645149826" duration="702000" />
       <workItem from="1708707162665" duration="2766000" />
       <workItem from="1708712396048" duration="473000" />
+      <workItem from="1708713809446" duration="2063000" />
+      <workItem from="1708812976920" duration="7679000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <option name="closed" value="true" />
