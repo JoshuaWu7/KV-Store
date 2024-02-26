@@ -41,6 +41,7 @@ public class KVServerTaskHandler implements Runnable {
     private final AtomicInteger bytesUsed;
     private final DatagramPacket iPacket;
     private final Cache<RequestCacheKey, DatagramPacket> requestCache;
+
     /**
      * This is synchronized. You must obtain the maplock's readlock (See KVServer for full explanation)
      * if you wish to modify it. Wipeout obtains the writelock.
@@ -112,6 +113,20 @@ public class KVServerTaskHandler implements Runnable {
         this.bytePool = bytePool;
         this.isOverloaded = isOverloaded;
         this.outbound = outbound;
+        this.serverRing = serverRing;
+        this.pendingRecordDeaths = pendingRecordDeaths;
+    }
+
+    // TODO: empty constructor for testing
+    public KVServerTaskHandler(ConsistentMap serverRing, ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths) {
+        this.iPacket = null;
+        this.requestCache = null;
+        this.map = null;
+        this.mapLock = null;
+        this.bytesUsed = null;
+        this.bytePool = null;
+        this.isOverloaded = false;
+        this.outbound = null;
         this.serverRing = serverRing;
         this.pendingRecordDeaths = pendingRecordDeaths;
     }
@@ -594,10 +609,22 @@ public class KVServerTaskHandler implements Runnable {
     {
         /* retrieve the list of obituaries that the sender knows */
         List<ServerEntry> deadServers = payload.getServerRecord();
-        int version = payload.getVersion();
-        List<Integer> serverStatusCodes = new ArrayList<Integer>();
+        List<Integer> serverStatusCodes = getDeathCodes(deadServers);
 
-        for(ServerEntry server: deadServers){
+        DatagramPacket pkt = null;
+        ValueWrapper value = null;
+
+        /* create response packet for receiving news */
+        RequestCacheValue response = scaf.setResponseType(OBITUARIES).setServerStatusCodes(serverStatusCodes).build();
+        pkt = generateAndSend(response);
+        return pkt;
+    }
+
+    // TODO: needs to be changed back to private after testing
+    public List<Integer> getDeathCodes(List<ServerEntry> deadServers) {
+        List<Integer> serverStatusCodes = new ArrayList<>();
+
+        for (ServerEntry server: deadServers) {
             try {
                 /* retrieve server address and port */
                 InetAddress addr = InetAddress.getByAddress(server.getServerAddress());
@@ -609,7 +636,6 @@ public class KVServerTaskHandler implements Runnable {
 
                     // this might not work
                     pendingRecordDeaths.add((ServerRecord) server);
-
                     serverStatusCodes.add(STAT_CODE_NEW);
 
                 } else{
@@ -621,13 +647,7 @@ public class KVServerTaskHandler implements Runnable {
             }
         }
 
-        DatagramPacket pkt = null;
-        ValueWrapper value = null;
-
-        /* create response packet for receiving news */
-        RequestCacheValue response = scaf.setResponseType(OBITUARIES).setServerStatusCodes(serverStatusCodes).build();
-        pkt = generateAndSend(response);
-        return pkt;
+        return serverStatusCodes;
     }
 
 
