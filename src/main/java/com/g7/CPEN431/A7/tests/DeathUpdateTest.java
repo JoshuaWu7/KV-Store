@@ -12,14 +12,14 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static com.g7.CPEN431.A7.KVServerTaskHandler.STAT_CODE_NEW;
 import static com.g7.CPEN431.A7.KVServerTaskHandler.STAT_CODE_OLD;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class DeathUpdateTest {
     static UnwrappedPayload payload = new UnwrappedPayload();
@@ -36,7 +36,7 @@ public class DeathUpdateTest {
     public void setup() throws UnknownHostException {
         try {
             ring = new ConsistentMap(num_vnode, "servers.txt");
-        } catch (IOException | NoSuchAlgorithmException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
