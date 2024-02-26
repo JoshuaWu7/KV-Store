@@ -118,10 +118,29 @@ public class DeathRegistrar extends TimerTask {
         }
     }
 
-    private int checkIsAlive()
-    {
-        // TODO vicky;
-        return 0;
-    }
+    /**
+     * This function picks a random node from the server list and sends an isAlive request
+     * to it. If there is no response after retries, we update the server list to account for
+     * the "dead" server. Otherwise, do nothing.
+     */
+    private void checkIsAlive() {
+        ServerRecord target = null;
 
+        try {
+            target = ring.getRandomServer();
+
+            sender.setDestination(target.getAddress(), target.getServerPort());
+            sender.isAlive();
+        } catch (ConsistentMap.NoServersException | IOException | KVClient.MissingValuesException |
+                 InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (KVClient.ServerTimedOutException e) {
+            // Update server death time to current time, then add to list of deaths
+            target.setInformationTime(System.currentTimeMillis());
+
+            // TODO: Might need to update code to indicate server is dead
+
+            deathRecord.put(target, target);
+        }
+    }
 }
