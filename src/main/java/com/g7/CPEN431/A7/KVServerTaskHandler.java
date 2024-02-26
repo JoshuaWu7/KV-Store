@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -91,6 +92,7 @@ public class KVServerTaskHandler implements Runnable {
 
     public final static int STAT_CODE_OK = 0x00;
     public final static int STAT_CODE_OLD = 0x01;
+    public final static int STAT_CODE_NEW = 0x02;
 
     public KVServerTaskHandler(DatagramPacket iPacket,
                                Cache<RequestCacheKey, DatagramPacket> requestCache,
@@ -590,14 +592,14 @@ public class KVServerTaskHandler implements Runnable {
      */
     private DatagramPacket handleDeathUpdate(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
     {
-        /* retrive the list of obituaries that the sender knows */
+        /* retrieve the list of obituaries that the sender knows */
         List<ServerEntry> deadServers = payload.getServerRecord();
-
-        DatagramPacket pkt = null;
+        int version = payload.getVersion();
+        List<Integer> serverStatusCodes = new ArrayList<Integer>();
 
         for(ServerEntry server: deadServers){
             try {
-                /* reteieve server address and port */
+                /* retrieve server address and port */
                 InetAddress addr = InetAddress.getByAddress(server.getServerAddress());
                 int port = server.getServerPort();
 
@@ -608,18 +610,23 @@ public class KVServerTaskHandler implements Runnable {
                     // this might not work
                     pendingRecordDeaths.add((ServerRecord) server);
 
-                    /* create response packet for receiving news */
-                    RequestCacheValue response = scaf.setResponseType(NEWS).build();
-                    pkt = generateAndSend(response);
+                    serverStatusCodes.add(STAT_CODE_NEW);
+
                 } else{
                     /* tell the sender that the information transferred is old news (server not in the ring already) */
-                    RequestCacheValue response = scaf.setResponseType(OLD_NEWS).build();
-                    pkt = generateAndSend(response);
+                    serverStatusCodes.add(STAT_CODE_OLD);
                 }
             } catch(UnknownHostException uhe){
-                System.err.println("Unknown Host: cannot remove server");
+                System.err.println("Unknown Host, cannot remove server: " + uhe.getMessage());
             }
         }
+
+        DatagramPacket pkt = null;
+        ValueWrapper value = null;
+
+        /* create response packet for receiving news */
+        RequestCacheValue response = scaf.setResponseType(OBITUARIES).setServerStatusCodes(serverStatusCodes).build();
+        pkt = generateAndSend(response);
         return pkt;
     }
 

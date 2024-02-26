@@ -67,46 +67,46 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.KVServer.executor": "Coverage",
-    "Downloaded.Files.Path.Enabled": "false",
-    "JAR Application.Remote.executor": "Run",
-    "JUnit.ExampleTest.testAdd.executor": "Run",
-    "Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor": "Run",
-    "Maven.App.executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [clean].executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [install...].executor": "Run",
-    "Maven.CPEN431_2024_A4_82033788 [install].executor": "Run",
-    "Maven.CPEN431_2024_PROJECT_7 [install...].executor": "Run",
-    "Maven.CPEN431_2024_PROJECT_7 [install].executor": "Run",
-    "Maven.KVServer 13788.executor": "Run",
-    "Maven.KVServer 13789.executor": "Debug",
-    "Maven.KVServer.executor": "Run",
-    "Repository.Attach.Annotations": "false",
-    "Repository.Attach.JavaDocs": "false",
-    "Repository.Attach.Sources": "false",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "Shell Script.node_killer.sh.executor": "Run",
-    "Shell Script.node_starter.sh.executor": "Run",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/home/beako/Documents/cpen431/cpen431_2024_a4_82033788",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Libraries",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2",
-    "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.KVServer.executor&quot;: &quot;Coverage&quot;,
+    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
+    &quot;JAR Application.Remote.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ExampleTest.testAdd.executor&quot;: &quot;Run&quot;,
+    &quot;Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.App.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [install...].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_A4_82033788 [install].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_PROJECT_7 [install...].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.CPEN431_2024_PROJECT_7 [install].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.KVServer 13788.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.KVServer 13789.executor&quot;: &quot;Debug&quot;,
+    &quot;Maven.KVServer.executor&quot;: &quot;Run&quot;,
+    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;Shell Script.node_killer.sh.executor&quot;: &quot;Run&quot;,
+    &quot;Shell Script.node_starter.sh.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;death__obituaries__handling&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/beako/Documents/cpen431/cpen431_2024_a4_82033788&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -340,7 +340,9 @@
       <workItem from="1708707162665" duration="2766000" />
       <workItem from="1708712396048" duration="473000" />
       <workItem from="1708713809446" duration="2063000" />
-      <workItem from="1708812976920" duration="7679000" />
+      <workItem from="1708812976920" duration="8143000" />
+      <workItem from="1708866637123" duration="4594000" />
+      <workItem from="1708905716055" duration="3389000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <option name="closed" value="true" />

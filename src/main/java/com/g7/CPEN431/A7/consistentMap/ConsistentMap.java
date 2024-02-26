@@ -108,7 +108,11 @@ public class ConsistentMap {
      * @return whether the server exist in the ring
      */
     public boolean hasServer(InetAddress addr, int port){
-        return true;
+        long hashcode = new ServerRecord(addr, port, 0).getHash();
+        lock.readLock().lock();
+        boolean hasKey = ring.containsKey(hashcode);
+        lock.readLock().unlock();
+        return hasKey;
     }
 
     private long getHash(byte[] key) {

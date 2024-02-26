@@ -18,6 +18,5 @@ public enum ResponseType {
     NO_MEM,
     OVERLOAD_CACHE,
     OVERLOAD_THREAD,
-    OLD_NEWS,
-    NEWS
+    OBITUARIES
 }
