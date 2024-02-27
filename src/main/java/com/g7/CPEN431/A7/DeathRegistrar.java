@@ -22,6 +22,10 @@ public class DeathRegistrar extends TimerTask {
     Random random;
     final static int K = 6;
 
+    public final static int CODE_ALI = 0x1;
+    public final static int CODE_DED = 0x2;
+
+
     public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring)
     throws IOException {
         this.deathRecord = new HashMap<>();
@@ -147,6 +151,7 @@ public class DeathRegistrar extends TimerTask {
         } catch (KVClient.ServerTimedOutException e) {
             // Update server death time to current time, then add to list of deaths
             target.setInformationTime(System.currentTimeMillis());
+            target.setCode(CODE_DED);
 
             // TODO: Might need to update code to indicate server is dead
 
