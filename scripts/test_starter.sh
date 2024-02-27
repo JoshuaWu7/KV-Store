@@ -21,10 +21,10 @@ scp -o StrictHostKeyChecking=no \
 ../servers.txt $AWS_HOST:~/testjar/servers_all.txt
 
 echo "ssh to remote server"
-cat single_starter.sh | ssh -o StrictHostKeyChecking=no $AWS_HOST
+cat ./helper/single_starter.sh | ssh -o StrictHostKeyChecking=no $AWS_HOST
 
 echo "start tester"
-cat start_eval.sh | ssh -o StrictHostKeyChecking=no $AWS_HOST
+cat ./helper/start_eval.sh | ssh -o StrictHostKeyChecking=no $AWS_HOST
 
 echo "Test complete"
 
