@@ -166,6 +166,7 @@ public class ServerRecord implements ServerEntry {
     @Override
     public void setCode(int code) {
         this.updateCode = code;
+        this.updateCodeExists = true;
     }
 
     public class HashNotGeneratedException extends Exception {}
