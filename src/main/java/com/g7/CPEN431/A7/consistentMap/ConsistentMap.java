@@ -1,5 +1,7 @@
 package com.g7.CPEN431.A7.consistentMap;
 
+import com.g7.CPEN431.A7.KVServer;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
@@ -15,10 +17,14 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static com.g7.CPEN431.A7.KVServer.self;
+import static com.g7.CPEN431.A7.KVServer.selfLoopback;
+
 public class ConsistentMap {
     private final TreeMap<Long , ServerRecord> ring;
     private final int vnodes;
     private final ReadWriteLock lock;
+    private long current = 0;
 
     public ConsistentMap(int vnodes, String serverPathName) throws IOException  {
         this.ring = new TreeMap<>();
@@ -44,6 +50,13 @@ public class ConsistentMap {
         for(int i = 0; i < vnodes; i++)
         {
             ServerRecord vnode = new ServerRecord(address, port, i);
+
+            /* only activated during initialization, initializes current ptr */
+            if(vnode.equals(self) || vnode.equals(selfLoopback))
+            {
+                this.current = self.getHash() + 1;
+            }
+
             ring.put(vnode.getHash(), vnode);
         }
         lock.writeLock().unlock();
@@ -89,6 +102,25 @@ public class ConsistentMap {
         }
 
         long hashcode = new Random().nextLong();
+
+        Map.Entry<Long, ServerRecord> server = ring.ceilingEntry(hashcode);
+        /* Deal with case where the successor of the key is past "0" */
+        server = (server == null) ? ring.firstEntry(): server;
+
+        lock.readLock().unlock();
+
+        return server.getValue();
+    }
+
+    public ServerRecord getNextServer() throws NoServersException {
+        lock.readLock().lock();
+        if(ring.isEmpty())
+        {
+            lock.readLock().unlock();
+            throw new NoServersException();
+        }
+
+        long hashcode = current++;
 
         Map.Entry<Long, ServerRecord> server = ring.ceilingEntry(hashcode);
         /* Deal with case where the successor of the key is past "0" */

@@ -11,6 +11,9 @@ import java.net.DatagramSocket;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import static com.g7.CPEN431.A7.KVServer.self;
+import static com.g7.CPEN431.A7.KVServer.selfLoopback;
+
 public class DeathRegistrar extends TimerTask {
     Map<ServerRecord, ServerRecord> deathRecord;
     ConcurrentLinkedQueue<ServerRecord> pendingRecords;
@@ -32,6 +35,7 @@ public class DeathRegistrar extends TimerTask {
     public void run() {
         updateDeathRecords();
         checkIsAlive();
+        gossip();
 
     }
 
@@ -127,7 +131,13 @@ public class DeathRegistrar extends TimerTask {
         ServerRecord target = null;
 
         try {
-            target = ring.getRandomServer();
+            target = ring.getNextServer();
+
+            /* omit this round if next server is equal to self */
+            if(target.equals(selfLoopback) || target.equals(self))
+            {
+                return;
+            }
 
             sender.setDestination(target.getAddress(), target.getServerPort());
             sender.isAlive();
