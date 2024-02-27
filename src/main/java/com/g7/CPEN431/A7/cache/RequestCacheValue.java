@@ -38,7 +38,6 @@ public class RequestCacheValue implements KVResponse {
         this.reqID = builder.b_reqID;
         this.incomingCRC = builder.b_incomingCRC;
         this.pb = builder.b_pb;
-        this.serverStatusCodes = builder.b_serverStatusCodes;
 
 
         switch (type) {
@@ -54,7 +53,13 @@ public class RequestCacheValue implements KVResponse {
             case RETRY_NOT_EQUAL:   this.errCode = KVServerTaskHandler.RES_CODE_RETRY_NOT_EQUAL;    break;
             case NO_KEY:            this.errCode = KVServerTaskHandler.RES_CODE_NO_KEY;             break;
             case NO_MEM:            this.errCode = KVServerTaskHandler.RES_CODE_NO_MEM;             break;
-            case OBITUARIES:        this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;            break;
+            case OBITUARIES:
+            {
+                this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;
+                if(this.serverStatusCodes == null) throw new IllegalArgumentException();
+                this.serverStatusCodes = builder.b_serverStatusCodes;
+                break;
+            }
             case OVERLOAD_CACHE:
             {
                 this.errCode = KVServerTaskHandler.RES_CODE_OVERLOAD;
@@ -155,6 +160,7 @@ public class RequestCacheValue implements KVResponse {
 
         //TODO: Add a set server status code function
         public Builder setServerStatusCodes(List<Integer> statusCodes){
+            if(statusCodes == null) throw new IllegalArgumentException();
             this.b_serverStatusCodes = statusCodes;
             return this;
         }
