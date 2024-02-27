@@ -11,6 +11,9 @@ import java.net.DatagramSocket;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import static com.g7.CPEN431.A7.KVServer.self;
+import static com.g7.CPEN431.A7.KVServer.selfLoopback;
+
 public class DeathRegistrar extends TimerTask {
     Map<ServerRecord, ServerRecord> deathRecord;
     ConcurrentLinkedQueue<ServerRecord> pendingRecords;
@@ -32,6 +35,7 @@ public class DeathRegistrar extends TimerTask {
     public void run() {
         updateDeathRecords();
         checkIsAlive();
+        gossip();
 
     }
 
@@ -118,10 +122,35 @@ public class DeathRegistrar extends TimerTask {
         }
     }
 
-    private int checkIsAlive()
-    {
-        // TODO vicky;
-        return 0;
-    }
+    /**
+     * This function picks a random node from the server list and sends an isAlive request
+     * to it. If there is no response after retries, we update the server list to account for
+     * the "dead" server. Otherwise, do nothing.
+     */
+    private void checkIsAlive() {
+        ServerRecord target = null;
 
+        try {
+            target = ring.getNextServer();
+
+            /* omit this round if next server is equal to self */
+            if(target.equals(selfLoopback) || target.equals(self))
+            {
+                return;
+            }
+
+            sender.setDestination(target.getAddress(), target.getServerPort());
+            sender.isAlive();
+        } catch (ConsistentMap.NoServersException | IOException | KVClient.MissingValuesException |
+                 InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (KVClient.ServerTimedOutException e) {
+            // Update server death time to current time, then add to list of deaths
+            target.setInformationTime(System.currentTimeMillis());
+
+            // TODO: Might need to update code to indicate server is dead
+
+            deathRecord.put(target, target);
+        }
+    }
 }
