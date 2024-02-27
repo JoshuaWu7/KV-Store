@@ -11,7 +11,7 @@ scp -o StrictHostKeyChecking=no \
 
 echo "copying server to remote"
 scp -o StrictHostKeyChecking=no \
-../target/CPEN431_2024_PROJECT_7-1.0-SNAPSHOT-jar-with-dependencies.jar $AWS_HOST:~/testjar/A6.jar
+../a6-cracked.jar $AWS_HOST:~/testjar/A6.jar
 
 echo "copying servers.txt to remote"
 echo "127.0.0.1:43100" | ssh $AWS_HOST 'cat > ~/testjar/servers.txt'

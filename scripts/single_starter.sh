@@ -6,6 +6,8 @@ END_PORT=$(($START_PORT + $SERVER_COUNT - 1))
 
 cd testjar
 
+killall -9 java
+
 for i in $(seq $START_PORT $END_PORT);
 do
   echo $i

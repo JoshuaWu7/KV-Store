@@ -9,5 +9,3 @@ java -jar a6_eval.jar --submit --servers-list servers_all.txt --secret-code 2706
 
 echo "killing all java"
 killall -9 java
-
-cat A6.log
