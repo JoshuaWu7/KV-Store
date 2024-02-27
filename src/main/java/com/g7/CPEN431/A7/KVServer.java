@@ -14,6 +14,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.Timer;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -37,6 +38,7 @@ public class KVServer
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
+    final static int GOSSIP_INTERVAL = 500;
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
 
@@ -115,7 +117,9 @@ public class KVServer
             /* Set up obituary list */
             ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths = new ConcurrentLinkedQueue();
 
-            /* TODO set up the timer */
+            /* set up the timer */
+            Timer timer = new Timer();
+            timer.scheduleAtFixedRate(new DeathRegistrar(pendingRecordDeaths, serverRing), GOSSIP_INTERVAL, GOSSIP_INTERVAL);
 
             while(true){
 
