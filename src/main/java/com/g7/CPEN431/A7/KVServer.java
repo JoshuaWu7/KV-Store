@@ -38,7 +38,8 @@ public class KVServer
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
-    final static int GOSSIP_INTERVAL = 500;
+    final static int GOSSIP_INTERVAL = 2000;
+    final static int GOSSIP_WAIT_INIT = 8000;
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
 
@@ -119,7 +120,7 @@ public class KVServer
 
             /* set up the timer */
             Timer timer = new Timer();
-            timer.scheduleAtFixedRate(new DeathRegistrar(pendingRecordDeaths, serverRing), GOSSIP_INTERVAL, GOSSIP_INTERVAL);
+            timer.scheduleAtFixedRate(new DeathRegistrar(pendingRecordDeaths, serverRing), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
 
             while(true){
 
