@@ -37,8 +37,8 @@ public class KVServer
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
-    static ServerRecord self;
-    static ServerRecord selfLoopback;
+    public static ServerRecord self;
+    public static ServerRecord selfLoopback;
 
 
     public static void main( String[] args )
