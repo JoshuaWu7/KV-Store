@@ -73,6 +73,11 @@ public class ConsistentMap {
         lock.writeLock().unlock();
     }
 
+    public void removeServer(ServerRecord r)
+    {
+        removeServer(r.getAddress(), r.getPort());
+    }
+
     public ServerRecord getServer(byte[] key) throws NoServersException, NoSuchAlgorithmException {
         lock.readLock().lock();
         if(ring.isEmpty())
@@ -131,6 +136,17 @@ public class ConsistentMap {
         lock.readLock().unlock();
 
         return server.getValue();
+    }
+
+    public void setAllVnodesAlive(ServerRecord r)
+    {
+        lock.writeLock().lock();
+        for(int i = 0; i < vnodes; i++)
+        {
+            long hashcode = new ServerRecord(r.getAddress(), r.getPort(), i).getHash();
+            ring.get(hashcode).setLastSeenNow();
+        }
+        lock.writeLock().unlock();
     }
 
     private long getHash(byte[] key) throws NoSuchAlgorithmException {

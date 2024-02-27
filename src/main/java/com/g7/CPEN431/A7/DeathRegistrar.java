@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static com.g7.CPEN431.A7.KVServer.self;
 import static com.g7.CPEN431.A7.KVServer.selfLoopback;
+import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_DED;
 
 public class DeathRegistrar extends TimerTask {
     Map<ServerRecord, ServerRecord> deathRecord;
@@ -22,8 +23,7 @@ public class DeathRegistrar extends TimerTask {
     Random random;
     final static int K = 6;
 
-    public final static int CODE_ALI = 0x1;
-    public final static int CODE_DED = 0x2;
+
 
 
     public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring)
@@ -89,8 +89,15 @@ public class DeathRegistrar extends TimerTask {
         ServerResponse r;
         try {
             r = sender.isDead(l);
+        } catch (KVClient.ServerTimedOutException e)
+        {
+            System.out.println("gossipee is dead");
+            ring.removeServer(target);
+            target.setLastSeenDeadNow();
+            deathRecord.put(target, target);
+            return;
         } catch (Exception e) {
-            System.err.println("Spreading gossip failed");
+            System.out.println("Spreading gossip failed");
             e.printStackTrace();
             return;
         }
@@ -115,6 +122,7 @@ public class DeathRegistrar extends TimerTask {
             return;
         }
 
+
         for(int i = 0; i < l.size(); i++)
         {
             if(responses.get(i) == KVServerTaskHandler.STAT_CODE_OLD && random.nextInt(K) == 0)
@@ -124,6 +132,9 @@ public class DeathRegistrar extends TimerTask {
                 //TODO additional logic to store old "news" that is recirculating. probably let vanessa do this.
             }
         }
+
+        /* Mark the gosipee as alive */
+        ring.setAllVnodesAlive(target);
     }
 
     /**

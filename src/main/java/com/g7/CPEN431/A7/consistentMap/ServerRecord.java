@@ -22,6 +22,9 @@ public class ServerRecord implements ServerEntry {
     private boolean informationTimeExists = false;
     private boolean updateCodeExists = false;
 
+    public final static int CODE_ALI = 0x1;
+    public final static int CODE_DED = 0x2;
+
     public ServerRecord(InetAddress address, int port, int vnode_id) {
         this.address = address;
         this.port = port;
@@ -135,6 +138,18 @@ public class ServerRecord implements ServerEntry {
     public void setServerPort(int serverPort) {
         this.port = serverPort;
         this.portExists = true;
+    }
+
+    public void setLastSeenNow()
+    {
+        setInformationTime(Instant.now().toEpochMilli());
+        setCode(CODE_ALI);
+    }
+
+    public void setLastSeenDeadNow()
+    {
+        setInformationTime(Instant.now().toEpochMilli());
+        setCode(CODE_DED);
     }
 
     @Override
