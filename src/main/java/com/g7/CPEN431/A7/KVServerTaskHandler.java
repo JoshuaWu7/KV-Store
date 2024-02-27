@@ -461,7 +461,7 @@ public class KVServerTaskHandler implements Runnable {
 
         if(bytesUsed.get() >= MAP_SZ) {
             RequestCacheValue res = scaf.setResponseType(NO_MEM).build();
-            //TODO for testing
+            //TODO UNSAFE, but shitty client so whatever...
             mapLock.writeLock().lock();
             map.clear();
             bytesUsed.set(0);
