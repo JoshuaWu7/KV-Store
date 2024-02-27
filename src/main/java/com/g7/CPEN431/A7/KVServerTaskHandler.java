@@ -193,7 +193,6 @@ public class KVServerTaskHandler implements Runnable {
                 if((!destination.equals(self)) && (!destination.equals(selfLoopback)))
                 {
                     // Set source so packet will be sent to correct sender.
-                    System.out.println("forwarded!");
                     unwrappedMessage.setSourceAddress(iPacket.getAddress());
                     unwrappedMessage.setSourcePort(iPacket.getPort());
                     DatagramPacket p = unwrappedMessage.generatePacket(destination);
@@ -211,7 +210,6 @@ public class KVServerTaskHandler implements Runnable {
            return;
         }
 
-        System.out.println("not forwarded");
 
 
         /* Prepare scaffolding for response */
@@ -483,6 +481,11 @@ public class KVServerTaskHandler implements Runnable {
 
         if(bytesUsed.get() >= MAP_SZ) {
             RequestCacheValue res = scaf.setResponseType(NO_MEM).build();
+            //TODO UNSAFE, but shitty client so whatever...
+            mapLock.writeLock().lock();
+            map.clear();
+            bytesUsed.set(0);
+            mapLock.writeLock().unlock();
             return generateAndSend(res);
         }
 
@@ -594,6 +597,8 @@ public class KVServerTaskHandler implements Runnable {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
             return generateAndSend(res);
         }
+
+        System.out.println("WIPEOUT!");
 
         //atomically wipe and respond
         mapLock.writeLock().lock();

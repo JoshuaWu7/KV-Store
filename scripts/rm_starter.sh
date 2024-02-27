@@ -14,7 +14,7 @@ scp -o StrictHostKeyChecking=no \
 ../servers.txt $AWS_HOST:~/serverjar/servers.txt
 
 echo "ssh to remote server"
-cat node_starter.sh | ssh -o StrictHostKeyChecking=no $AWS_HOST
+cat ./helper/node_starter.sh | ssh -o StrictHostKeyChecking=no $AWS_HOST
 
 echo "Servers started"
 
