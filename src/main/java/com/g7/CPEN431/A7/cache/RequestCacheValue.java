@@ -56,8 +56,8 @@ public class RequestCacheValue implements KVResponse {
             case OBITUARIES:
             {
                 this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;
-                if(this.serverStatusCodes == null) throw new IllegalArgumentException();
                 this.serverStatusCodes = builder.b_serverStatusCodes;
+                if(this.serverStatusCodes == null) throw new IllegalArgumentException();
                 break;
             }
             case OVERLOAD_CACHE:
