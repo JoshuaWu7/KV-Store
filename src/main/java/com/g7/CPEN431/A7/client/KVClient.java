@@ -61,7 +61,7 @@ public class KVClient {
         this.socket = socket;
         this.publicBuf = publicBuf;
 
-        socket.setSoTimeout(100);
+        socket.setSoTimeout(300);
     }
 
     public KVClient(InetAddress serverAddress, int serverPort, DatagramSocket socket, byte[] publicBuf, int testSequence) {
@@ -335,7 +335,6 @@ public class KVClient {
             try {
                 socket.receive(rP);
             } catch (SocketTimeoutException e) {
-                System.out.println("Timed out");
                 tries++;
                 continue;
                 //do nothing and let it loop

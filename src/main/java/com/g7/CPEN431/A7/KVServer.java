@@ -38,7 +38,7 @@ public class KVServer
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
-    final static int GOSSIP_INTERVAL = 2000;
+    final static int GOSSIP_INTERVAL = 500;
     final static int GOSSIP_WAIT_INIT = 8000;
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
