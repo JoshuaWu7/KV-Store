@@ -438,18 +438,19 @@ public class KVServerTaskHandler implements Runnable {
      * @return The packet sent
      */
     private DatagramPacket handleShutdown (RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
-        if(payload.hasValue() || payload.hasVersion() || payload.hasKey())
-        {
-            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
-            return generateAndSend(res);
-        }
-
-        RequestCacheValue res = scaf.setResponseType(SHUTDOWN).build();
-        DatagramPacket pkt = generateAndSend(res);
-
-        System.out.println("Recevied shutdown command, shutting down now");
+//        if(payload.hasValue() || payload.hasVersion() || payload.hasKey())
+//        {
+//            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+//            return generateAndSend(res);
+//        }
+//
+//        RequestCacheValue res = scaf.setResponseType(SHUTDOWN).build();
+//        DatagramPacket pkt = generateAndSend(res);
+//
+//        System.out.println("Recevied shutdown command, shutting down now");
         System.exit(0);
-        return pkt;
+        return null;
+//        return pkt;
     }
 
     /**
@@ -598,7 +599,6 @@ public class KVServerTaskHandler implements Runnable {
             return generateAndSend(res);
         }
 
-        System.out.println("WIPEOUT!");
 
         //atomically wipe and respond
         mapLock.writeLock().lock();
