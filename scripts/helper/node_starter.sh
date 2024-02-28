@@ -1,11 +1,14 @@
 #!/bin/bash
 
-SERVER_COUNT=20
-START_PORT=10000
+SERVER_COUNT=$1
+START_PORT=$2
 END_PORT=$(($START_PORT + $SERVER_COUNT - 1))
 
 cd serverjar
 
+echo "setting packet loss + delay"
+sudo tc qdisc add dev lo root netem delay 5msec loss 2.5%
+sudo tc qdisc add dev ens5 root netem delay 5msec loss 2.5%
 
 for i in $(seq $START_PORT $END_PORT);
 do
@@ -26,5 +29,4 @@ do
   $i &
 done
 echo "Server creation complete"
-
-logout
+exit
