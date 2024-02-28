@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SERVER_COUNT=5
-START_PORT=13788
+SERVER_COUNT=20
+START_PORT=10000
 END_PORT=$(($START_PORT + $SERVER_COUNT - 1))
 
 cd serverjar
@@ -22,7 +22,7 @@ do
   --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
   --add-opens=java.base/java.io=ALL-UNNAMED \
   --add-opens=java.base/java.util=ALL-UNNAMED \
-  -jar A6.jar \
+  -jar A7.jar \
   $i &
 done
 echo "Server creation complete"

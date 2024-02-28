@@ -23,7 +23,7 @@ do
   --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
   --add-opens=java.base/java.io=ALL-UNNAMED \
   --add-opens=java.base/java.util=ALL-UNNAMED \
-  -jar A6.jar \
+  -jar A7.jar \
   $i >serverlog.log 2>&1 </dev/null&
 done
 

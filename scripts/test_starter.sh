@@ -7,11 +7,12 @@ ssh -o StrictHostKeyChecking=no $AWS_HOST "mkdir -p testjar"
 
 echo "copying eval client to remote"
 scp -o StrictHostKeyChecking=no \
-../a6_eval.jar $AWS_HOST:~/testjar/a6_eval.jar
+../a7_eval.jar $AWS_HOST:~/testjar/a7_eval.jar
 
 echo "copying server to remote"
 scp -o StrictHostKeyChecking=no \
-../a6-cracked.jar $AWS_HOST:~/testjar/A6.jar
+../target/CPEN431_2024_PROJECT_7-1.0-SNAPSHOT-jar-with-dependencies.jar \
+$AWS_HOST:~/testjar/A7.jar
 
 echo "copying servers.txt to remote"
 echo "127.0.0.1:43100" | ssh $AWS_HOST 'cat > ~/testjar/servers.txt'
