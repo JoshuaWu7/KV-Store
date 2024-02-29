@@ -13,9 +13,8 @@ sudo tc qdisc add dev ens5 root netem delay 5msec loss 2.5%
 for i in $(seq $START_PORT $END_PORT);
 do
   echo $i
-  java \
+  java -Xmx64m \
   -XX:+UseCompressedOops \
-  -Xmx64m \
   --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
   --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
   --add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED \
