@@ -1,5 +1,7 @@
 package com.g7.CPEN431.A7.consistentMap;
 
+import com.g7.CPEN431.A7.KVServer;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
@@ -15,10 +17,14 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static com.g7.CPEN431.A7.KVServer.self;
+import static com.g7.CPEN431.A7.KVServer.selfLoopback;
+
 public class ConsistentMap {
     private final TreeMap<Long , ServerRecord> ring;
     private final int vnodes;
     private final ReadWriteLock lock;
+    private long current = 0;
 
     public ConsistentMap(int vnodes, String serverPathName) throws IOException  {
         this.ring = new TreeMap<>();
@@ -34,19 +40,29 @@ public class ConsistentMap {
             InetAddress addr = InetAddress.getByName(serverNPort[0]);
             int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
 
-            addServer(addr, port);
+            ServerRecord serverRecord = addServer(addr, port);
+
+            /* only activated during initialization, initializes current ptr */
+            if(serverRecord.equals(self) || serverRecord.equals(selfLoopback))
+            {
+                this.current = self.getHash() + 1;
+            }
         }
     }
 
-    public void addServer(InetAddress address, int port)
+    public ServerRecord addServer(InetAddress address, int port)
     {
+        ServerRecord vnode = null;
+
         lock.writeLock().lock();
         for(int i = 0; i < vnodes; i++)
         {
-            ServerRecord vnode = new ServerRecord(address, port, i);
+            vnode = new ServerRecord(address, port, i);
             ring.put(vnode.getHash(), vnode);
         }
         lock.writeLock().unlock();
+
+        return vnode;
     }
 
     public void removeServer(InetAddress address, int port)
@@ -93,6 +109,27 @@ public class ConsistentMap {
         Map.Entry<Long, ServerRecord> server = ring.ceilingEntry(hashcode);
         /* Deal with case where the successor of the key is past "0" */
         server = (server == null) ? ring.firstEntry(): server;
+
+        lock.readLock().unlock();
+
+        return server.getValue();
+    }
+
+    public ServerRecord getNextServer() throws NoServersException {
+        lock.readLock().lock();
+        if(ring.isEmpty())
+        {
+            lock.readLock().unlock();
+            throw new NoServersException();
+        }
+
+
+        Map.Entry<Long, ServerRecord> server = ring.ceilingEntry(current);
+        /* Deal with case where the successor of the key is past "0" */
+        server = (server == null) ? ring.firstEntry(): server;
+
+        /* Set the ptr so that next ceiling entry will be the following node in the ring */
+        current = server.getKey() + 1;
 
         lock.readLock().unlock();
 

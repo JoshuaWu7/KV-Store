@@ -236,7 +236,7 @@ public class KVClient {
 
         return res;
     }
-    private ServerResponse isAlive() throws IOException, ServerTimedOutException, MissingValuesException, InterruptedException {
+    public ServerResponse isAlive() throws IOException, ServerTimedOutException, MissingValuesException, InterruptedException {
         /* Generate isAlive Message */
         UnwrappedPayload pl = new UnwrappedPayload();
         pl.setCommand(REQ_CODE_ALI);
@@ -399,8 +399,8 @@ public class KVClient {
     }
 
     /* Custom exceptions*/
-    class ServerTimedOutException extends Exception{}
-    class MissingValuesException extends Exception{
+    public class ServerTimedOutException extends Exception{}
+    public class MissingValuesException extends Exception{
         public String missingItem;
 
         public MissingValuesException(String missingItem) {
