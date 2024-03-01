@@ -114,6 +114,19 @@ public class ConsistentMap {
                 (long) (dig[0] & 0xFF)
                 );
     }
+    /**
+     * returns whether the server exist in the ring
+     * @param addr: the ip address of the server
+     * @param port: the port of the server
+     * @return whether the server exist in the ring
+     */
+    public boolean hasServer(InetAddress addr, int port){
+        long hashcode = new ServerRecord(addr, port, 0).getHash();
+        lock.readLock().lock();
+        boolean hasKey = ring.containsKey(hashcode);
+        lock.readLock().unlock();
+        return hasKey;
+    }
 
 public static class NoServersException extends Exception {}
 

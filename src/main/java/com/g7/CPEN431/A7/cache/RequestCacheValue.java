@@ -39,6 +39,7 @@ public class RequestCacheValue implements KVResponse {
         this.incomingCRC = builder.b_incomingCRC;
         this.pb = builder.b_pb;
 
+
         switch (type) {
             case INVALID_KEY:       this.errCode = KVServerTaskHandler.RES_CODE_INVALID_KEY;        break;
             case INVALID_VALUE:     this.errCode = KVServerTaskHandler.RES_CODE_INVALID_VALUE;      break;
@@ -52,6 +53,13 @@ public class RequestCacheValue implements KVResponse {
             case RETRY_NOT_EQUAL:   this.errCode = KVServerTaskHandler.RES_CODE_RETRY_NOT_EQUAL;    break;
             case NO_KEY:            this.errCode = KVServerTaskHandler.RES_CODE_NO_KEY;             break;
             case NO_MEM:            this.errCode = KVServerTaskHandler.RES_CODE_NO_MEM;             break;
+            case OBITUARIES:
+            {
+                this.errCode = KVServerTaskHandler.RES_CODE_SUCCESS;
+                this.serverStatusCodes = builder.b_serverStatusCodes;
+                if(this.serverStatusCodes == null) throw new IllegalArgumentException();
+                break;
+            }
             case OVERLOAD_CACHE:
             {
                 this.errCode = KVServerTaskHandler.RES_CODE_OVERLOAD;
@@ -113,6 +121,8 @@ public class RequestCacheValue implements KVResponse {
         private final int b_port;
         private final byte[] b_reqID;
         private final PublicBuffer b_pb;
+        private List<Integer> b_serverStatusCodes;
+
 
         public Builder(long incomingCRC, InetAddress adr, int port, byte[] req_id, PublicBuffer pb) {
             this.b_incomingCRC = incomingCRC;
@@ -149,6 +159,11 @@ public class RequestCacheValue implements KVResponse {
         }
 
         //TODO: Add a set server status code function
+        public Builder setServerStatusCodes(List<Integer> statusCodes){
+            if(statusCodes == null) throw new IllegalArgumentException();
+            this.b_serverStatusCodes = statusCodes;
+            return this;
+        }
 
         public RequestCacheValue build() {
             return new RequestCacheValue(this);
