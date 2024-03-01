@@ -40,26 +40,29 @@ public class ConsistentMap {
             InetAddress addr = InetAddress.getByName(serverNPort[0]);
             int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
 
-            addServer(addr, port);
-        }
-    }
-
-    public void addServer(InetAddress address, int port)
-    {
-        lock.writeLock().lock();
-        for(int i = 0; i < vnodes; i++)
-        {
-            ServerRecord vnode = new ServerRecord(address, port, i);
+            ServerRecord vnode = addServer(addr, port);
 
             /* only activated during initialization, initializes current ptr */
             if(vnode.equals(self) || vnode.equals(selfLoopback))
             {
                 this.current = self.getHash() + 1;
             }
+        }
+    }
 
+    public ServerRecord addServer(InetAddress address, int port)
+    {
+        ServerRecord vnode = null;
+
+        lock.writeLock().lock();
+        for(int i = 0; i < vnodes; i++)
+        {
+            vnode = new ServerRecord(address, port, i);
             ring.put(vnode.getHash(), vnode);
         }
         lock.writeLock().unlock();
+
+        return vnode;
     }
 
     public void removeServer(InetAddress address, int port)
