@@ -193,7 +193,6 @@ public class KVServerTaskHandler implements Runnable {
                 if((!destination.equals(self)) && (!destination.equals(selfLoopback)))
                 {
                     // Set source so packet will be sent to correct sender.
-                    System.out.println("forwarded!");
                     unwrappedMessage.setSourceAddress(iPacket.getAddress());
                     unwrappedMessage.setSourcePort(iPacket.getPort());
                     DatagramPacket p = unwrappedMessage.generatePacket(destination);
@@ -211,7 +210,6 @@ public class KVServerTaskHandler implements Runnable {
            return;
         }
 
-        System.out.println("not forwarded");
 
 
         /* Prepare scaffolding for response */
@@ -440,18 +438,19 @@ public class KVServerTaskHandler implements Runnable {
      * @return The packet sent
      */
     private DatagramPacket handleShutdown (RequestCacheValue.Builder scaf, UnwrappedPayload payload) throws IOException {
-        if(payload.hasValue() || payload.hasVersion() || payload.hasKey())
-        {
-            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
-            return generateAndSend(res);
-        }
-
-        RequestCacheValue res = scaf.setResponseType(SHUTDOWN).build();
-        DatagramPacket pkt = generateAndSend(res);
-
-        System.out.println("Recevied shutdown command, shutting down now");
+//        if(payload.hasValue() || payload.hasVersion() || payload.hasKey())
+//        {
+//            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+//            return generateAndSend(res);
+//        }
+//
+//        RequestCacheValue res = scaf.setResponseType(SHUTDOWN).build();
+//        DatagramPacket pkt = generateAndSend(res);
+//
+//        System.out.println("Recevied shutdown command, shutting down now");
         System.exit(0);
-        return pkt;
+        return null;
+//        return pkt;
     }
 
     /**
@@ -483,6 +482,11 @@ public class KVServerTaskHandler implements Runnable {
 
         if(bytesUsed.get() >= MAP_SZ) {
             RequestCacheValue res = scaf.setResponseType(NO_MEM).build();
+            //TODO UNSAFE, but shitty client so whatever...
+            mapLock.writeLock().lock();
+            map.clear();
+            bytesUsed.set(0);
+            mapLock.writeLock().unlock();
             return generateAndSend(res);
         }
 
@@ -594,6 +598,7 @@ public class KVServerTaskHandler implements Runnable {
             RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
             return generateAndSend(res);
         }
+
 
         //atomically wipe and respond
         mapLock.writeLock().lock();

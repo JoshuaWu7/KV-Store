@@ -1,6 +1,7 @@
 package com.g7.CPEN431.A7.client;
 
 
+import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgFactory;
 import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgSerializer;
 import com.g7.CPEN431.A7.newProto.KVRequest.KVRequestSerializer;
 import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
@@ -60,7 +61,7 @@ public class KVClient {
         this.socket = socket;
         this.publicBuf = publicBuf;
 
-        socket.setSoTimeout(100);
+        socket.setSoTimeout(300);
     }
 
     public KVClient(InetAddress serverAddress, int serverPort, DatagramSocket socket, byte[] publicBuf, int testSequence) {
@@ -334,7 +335,6 @@ public class KVClient {
             try {
                 socket.receive(rP);
             } catch (SocketTimeoutException e) {
-                System.out.println("Timed out");
                 tries++;
                 continue;
                 //do nothing and let it loop
@@ -345,7 +345,7 @@ public class KVClient {
 
             //verify message ID and CRC
             byte[] trimmed = Arrays.copyOf(rP.getData(), rP.getLength());
-            res = (UnwrappedMessage) KVMsgSerializer.parseFrom(new ServerResponseFactory(), trimmed);
+            res = (UnwrappedMessage) KVMsgSerializer.parseFrom(new KVMsgFactory(), trimmed);
 
             boolean msgIDMatch = res.hasMessageID() && Arrays.equals(res.getMessageID(), req.getMessageID());
 
@@ -365,7 +365,7 @@ public class KVClient {
 
         socket.setSoTimeout(initTimeout);
 
-        if(tries == 3 && !success) {
+        if(tries == 4 && !success) {
             System.out.println("Did not receive response after 3 tries");
             throw new ServerTimedOutException();
         }
