@@ -40,10 +40,10 @@ public class ConsistentMap {
             InetAddress addr = InetAddress.getByName(serverNPort[0]);
             int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
 
-            ServerRecord vnode = addServer(addr, port);
+            ServerRecord serverRecord = addServer(addr, port);
 
             /* only activated during initialization, initializes current ptr */
-            if(vnode.equals(self) || vnode.equals(selfLoopback))
+            if(serverRecord.equals(self) || serverRecord.equals(selfLoopback))
             {
                 this.current = self.getHash() + 1;
             }
