@@ -78,6 +78,7 @@ public class ConsistentMap {
         removeServer(r.getAddress(), r.getPort());
     }
 
+    /* These are potentially unsafe if ServerRecords are modified */
     public ServerRecord getServer(byte[] key) throws NoServersException, NoSuchAlgorithmException {
         lock.readLock().lock();
         if(ring.isEmpty())
