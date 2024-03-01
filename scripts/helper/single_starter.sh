@@ -7,8 +7,6 @@ END_PORT=$(($START_PORT + $SERVER_COUNT - 1))
 cd testjar
 
 killall -9 java
-#sudo tc qdisc del dev lo root
-#sudo tc qdisc del dev ens5 root
 
 for i in $(seq $START_PORT $END_PORT);
 do
