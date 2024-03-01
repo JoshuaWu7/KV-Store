@@ -8,7 +8,7 @@ cd testjar
 
 killall -9 java
 
-kor i in $(seq $START_PORT $END_PORT);
+for i in $(seq $START_PORT $END_PORT);
 do
   echo $i
   nohup java \
