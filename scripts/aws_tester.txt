@@ -1,1 +1,1 @@
-ec2-54-188-38-236.us-west-2.compute.amazonaws.com
+ec2-52-15-239-76.us-east-2.compute.amazonaws.com
