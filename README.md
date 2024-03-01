@@ -30,6 +30,7 @@ Please see ./scripts for details.
 3. Enter the private IP of the 20-node server AWS instance to ./scripts/aws_tester.txt
 4. Enter the amount of nodes on the first row of ./scripts/node_setup.txt
 5. Enter the starting port on the second row of ./scripts/node_setup.txt
+6. Paste a version of the evaluation client in the root directory ./
 
 
 ## Proof of immediate termination
