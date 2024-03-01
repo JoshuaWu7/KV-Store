@@ -7,3 +7,4 @@
 scripts/helper/*.sh eol=lf
 
 *.jar binary
+*.log binary
