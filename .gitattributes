@@ -1,0 +1,9 @@
+* text=auto
+
+*.java text
+*.proto text
+*.txt text
+.*sh text
+scripts/helper/*.sh eol=lf
+
+*.jar binary
