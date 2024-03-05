@@ -9,6 +9,7 @@ public class KVRequestFactory implements MessageFactory {
     public Object create(String fullMessageName) {
         if(fullMessageName.equals("KVRequest")) return new UnwrappedPayload();
         if(fullMessageName.equals("ServerEntry")) return new ServerRecord(fullMessageName);
+        if(fullMessageName.equals("PutPair")) return new KVPair();
         throw new IllegalArgumentException("Unknown message name: " + fullMessageName);
     }
 }

@@ -1,6 +1,7 @@
 package com.g7.CPEN431.A7.wrappers;
 
 import com.g7.CPEN431.A7.newProto.KVRequest.KVRequest;
+import com.g7.CPEN431.A7.newProto.KVRequest.PutPair;
 import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
 
 import java.util.List;
@@ -14,6 +15,7 @@ public class UnwrappedPayload implements KVRequest {
     private byte[] value;
     private int version = 0; //defaults to zero anyways, no logic
     private List<ServerEntry> obituaryUpdates;
+    private List<PutPair> bulkPutPair;
 
     private boolean keyExists = false;
     private boolean valueExists = false;
@@ -97,5 +99,20 @@ public class UnwrappedPayload implements KVRequest {
     @Override
     public void setServerRecord(List<ServerEntry> serverRecord) {
         this.obituaryUpdates = serverRecord;
+    }
+
+    @Override
+    public boolean hasPutPair() {
+        return bulkPutPair != null;
+    }
+
+    @Override
+    public List<PutPair> getPutPair() {
+        return bulkPutPair;
+    }
+
+    @Override
+    public void setPutPair(List<PutPair> putPair) {
+        this.bulkPutPair = putPair;
     }
 }
