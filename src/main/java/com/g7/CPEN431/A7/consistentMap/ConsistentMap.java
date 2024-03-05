@@ -62,7 +62,6 @@ public class ConsistentMap {
         for(int i = 0; i < VNodes; i++)
         {
             VNode vnode = new VNode(newServer, i);
-            ring.put(vnode.getHash(), vnode);
         }
         lock.writeLock().unlock();
 
@@ -180,6 +179,14 @@ public class ConsistentMap {
         int hashcode = new VNode(r, 0).getHash();
         ring.get(hashcode).serverRecord.setCode(statusCode);
         lock.writeLock().unlock();
+    }
+
+    public int getServerCount()
+    {
+        lock.readLock().lock();
+        int sz = ring.size();
+        lock.readLock().unlock();
+        return sz;
     }
 
     private int getHash(byte[] key) throws NoSuchAlgorithmException {
