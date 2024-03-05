@@ -24,6 +24,7 @@ public class ServerRecord implements ServerEntry {
     public final static int CODE_ALI = 0x1;
     public final static int CODE_DED = 0x2;
 
+
     public ServerRecord(InetAddress address, int port) {
         this.address = address;
         this.port = port;

@@ -19,18 +19,27 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static com.g7.CPEN431.A7.KVServer.self;
 import static com.g7.CPEN431.A7.KVServer.selfLoopback;
 
+/**
+ * A map API for a consistent hashing scheme.
+ */
 public class ConsistentMap {
     private final TreeMap<Integer, VNode> ring;
     private final int VNodes;
     private final ReadWriteLock lock;
     private int current = 0;
 
-    /* TODO revamp for thread safety */
+    /**
+     *
+     * @param vNodes number of vnodes in the consistent hashing scheme
+     * @param serverPathName path to txt file containing server IP addresses + port
+     * @throws IOException if cannot read txt file.
+     */
     public ConsistentMap(int vNodes, String serverPathName) throws IOException  {
         this.ring = new TreeMap<>();
         this.VNodes = vNodes;
         this.lock = new ReentrantReadWriteLock();
 
+        // Parse the txt file with all servers.
         Path path = Paths.get(serverPathName);
         List<String> serverList = Files.readAllLines(path , StandardCharsets.UTF_8);
 
@@ -50,11 +59,22 @@ public class ConsistentMap {
         }
     }
 
+    /**
+     *
+     * @param address IP address of server to add
+     * @param port of the server to add
+     */
     public void addServer(InetAddress address, int port)
     {
         addServerPrivate(address, port);
     }
 
+    /**
+     * Do not use this in public, since invariants are broken, leading to concurrency guarantees failing
+     * @param address IP address of server to add
+     * @param port of the server to add
+     * @return The actual server record in the ring
+     */
     private ServerRecord addServerPrivate(InetAddress address, int port)
     {
         ServerRecord newServer = new ServerRecord(address, port);
@@ -70,6 +90,12 @@ public class ConsistentMap {
         return newServer;
     }
 
+    /**
+     * Has no effects if server does not exist
+     * @param address IP address of server to remove
+     * @param port of server to remove
+     *
+     */
     public void removeServer(InetAddress address, int port)
     {
         ServerRecord r = new ServerRecord(address, port);
@@ -91,7 +117,13 @@ public class ConsistentMap {
         lock.writeLock().unlock();
     }
 
-    /* These are potentially unsafe if ServerRecords are modified */
+    /**
+     *
+     * @param key - byte array containing the key of the KV pair that will need to be mapped to a server
+     * @return A copy of the server
+     * @throws NoServersException If there are no servers in the ring
+     * @throws NoSuchAlgorithmException If MD5 hashing fails
+     */
     public ServerRecord getServer(byte[] key) throws NoServersException, NoSuchAlgorithmException {
         lock.readLock().lock();
         if(ring.isEmpty())
@@ -111,6 +143,11 @@ public class ConsistentMap {
         return new ServerRecord(server.getValue().getServerRecordClone());
     }
 
+    /**
+     *
+     * @return A random server in the ring.
+     * @throws NoServersException - If there are no servers
+     */
     public ServerRecord getRandomServer() throws NoServersException
     {
         lock.readLock().lock();
@@ -131,6 +168,11 @@ public class ConsistentMap {
         return server.getValue().getServerRecordClone();
     }
 
+    /**
+     *
+     * @return The next server, goes round robin starting from self.
+     * @throws NoServersException If there are no servers in the ring
+     */
     public ServerRecord getNextServer() throws NoServersException {
         lock.readLock().lock();
         if(ring.isEmpty())
@@ -152,6 +194,11 @@ public class ConsistentMap {
         return server.getValue().getServerRecordClone();
     }
 
+    /**
+     * Sets the corresponding physical server's record time to the current time,
+     * and marks it as alive
+     * @param r Server record (can be clone) who's record is to be amended.
+     */
     public void setServerAlive(ServerRecord r)
     {
         lock.writeLock().lock();
@@ -163,6 +210,12 @@ public class ConsistentMap {
         lock.writeLock().unlock();
     }
 
+    /**
+     * Helper function to hash any byte array to int
+     * @param key The byte array
+     * @return An integer hash
+     * @throws NoSuchAlgorithmException
+     */
     private int getHash(byte[] key) throws NoSuchAlgorithmException {
         MessageDigest md5 = MessageDigest.getInstance("MD5");
         byte[] dig = md5.digest(key);
@@ -174,6 +227,7 @@ public class ConsistentMap {
                 (dig[0] & 0xFF)
                 );
     }
+
     /**
      * returns whether the server exist in the ring
      * @param addr: the ip address of the server
@@ -190,11 +244,18 @@ public class ConsistentMap {
 
     public static class NoServersException extends Exception {}
 
+    /**
+     * A virtual node representing a physical server
+     */
     static class VNode {
         private ServerRecord serverRecord;
         private int vnodeID;
         private int hash;
 
+        /**
+         * @param physicalServer - The server that the vnode wraps
+         * @param vnodeID - An arbitrary int that differentiates vnodes of the same server apart
+         */
         public VNode(ServerRecord physicalServer, int vnodeID)
         {
             this.serverRecord = physicalServer;
@@ -204,10 +265,20 @@ public class ConsistentMap {
             this.hash = genHashFromServer(physicalServer, vnodeID);
         }
 
+        /**
+         *
+         * @return A clone of the server record wrapped.
+         */
         public ServerRecord getServerRecordClone() {
             return new ServerRecord(serverRecord);
         }
 
+        /**
+         * Helper function to generate an integer hash from a server's ip + vnode id + port
+         * @param record The wrapped physical server
+         * @param vnodeID Unique ID representing vnode
+         * @return integer hash
+         */
         private int genHashFromServer(ServerRecord record, int vnodeID)
         {
             int adrLen = record.getAddress().getAddress().length;
@@ -219,10 +290,19 @@ public class ConsistentMap {
             return genHash(hashBuf.array());
         }
 
+        /**
+         *
+         * @return the unique hash of this vnode
+         */
         public int getHash() {
             return hash;
         }
 
+        /**
+         * Helper function to generate integer hash from byte array using MD5
+         * @param key byte array
+         * @return integer hash
+         */
         private int genHash(byte[] key) {
             MessageDigest md5;
             try {

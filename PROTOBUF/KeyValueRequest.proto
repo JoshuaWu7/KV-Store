@@ -5,11 +5,17 @@ message ServerEntry {
     required uint32 code = 203;
 }
 
+message PutPair {
+    required bytes key = 300;
+    required bytes value = 301;
+}
+
 message KVRequest {
     required uint32 command = 1;
     optional bytes key = 2;
     optional bytes value = 3;
     optional int32 version = 4;
     repeated ServerEntry serverRecord = 100;
+    repeated PutPair putPair = 130;
 }
 
