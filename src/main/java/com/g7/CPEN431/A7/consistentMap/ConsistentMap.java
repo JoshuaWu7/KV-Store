@@ -25,7 +25,6 @@ public class ConsistentMap {
     private final ReadWriteLock lock;
     private int current = 0;
 
-    /* TODO revamp for thread safety */
     public ConsistentMap(int vNodes, String serverPathName) throws IOException  {
         this.ring = new TreeMap<>();
         this.VNodes = vNodes;
@@ -91,7 +90,6 @@ public class ConsistentMap {
         lock.writeLock().unlock();
     }
 
-    /* These are potentially unsafe if ServerRecords are modified */
     public ServerRecord getServer(byte[] key) throws NoServersException, NoSuchAlgorithmException {
         lock.readLock().lock();
         if(ring.isEmpty())
@@ -155,11 +153,32 @@ public class ConsistentMap {
     public void setServerAlive(ServerRecord r)
     {
         lock.writeLock().lock();
-        for(int i = 0; i < VNodes; i++)
-        {
-            int hashcode = new VNode(r, i).getHash();
-            ring.get(hashcode).serverRecord.setLastSeenNow();
-        }
+        int hashcode = new VNode(r, 0).getHash();
+        ring.get(hashcode).serverRecord.setLastSeenNow();
+        lock.writeLock().unlock();
+    }
+
+    public void setServerDeadNow(ServerRecord r)
+    {
+        lock.writeLock().lock();
+        int hashcode = new VNode(r, 0).getHash();
+        ring.get(hashcode).serverRecord.setLastSeenDeadNow();
+        lock.writeLock().unlock();
+    }
+
+    public void setServerInformationTime(ServerRecord r, long informationTime)
+    {
+        lock.writeLock().lock();
+        int hashcode = new VNode(r, 0).getHash();
+        ring.get(hashcode).serverRecord.setInformationTime(informationTime);
+        lock.writeLock().unlock();
+    }
+
+    public void setServerStatusCode(ServerRecord r, int statusCode)
+    {
+        lock.writeLock().lock();
+        int hashcode = new VNode(r, 0).getHash();
+        ring.get(hashcode).serverRecord.setCode(statusCode);
         lock.writeLock().unlock();
     }
 
@@ -188,7 +207,9 @@ public class ConsistentMap {
         return hasKey;
     }
 
-    public static class NoServersException extends Exception {}
+    public static class NoServersException extends IllegalStateException {}
+    class ServerDoesNotExistException extends IllegalStateException {};
+
 
     static class VNode {
         private ServerRecord serverRecord;
@@ -243,7 +264,6 @@ public class ConsistentMap {
         }
 
 }
-
 
 }
 

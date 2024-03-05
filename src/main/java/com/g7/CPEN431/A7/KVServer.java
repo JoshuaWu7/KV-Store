@@ -50,8 +50,8 @@ public class KVServer
         {
 
            PORT = Integer.parseInt(args[0]);
-           self = new ServerRecord(InetAddress.getLocalHost(), PORT, 0);
-           selfLoopback = new ServerRecord(InetAddress.getLoopbackAddress(), PORT, 0);
+           self = new ServerRecord(InetAddress.getLocalHost(), PORT);
+           selfLoopback = new ServerRecord(InetAddress.getLoopbackAddress(), PORT);
 
 
 
