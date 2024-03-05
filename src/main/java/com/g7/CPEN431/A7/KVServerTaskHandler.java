@@ -645,6 +645,9 @@ public class KVServerTaskHandler implements Runnable {
                 int port = server.getServerPort();
 
                 /* remove the server from the ring and add to the pending queue if the server is in the ring (receiving news) */
+                /* TODO: This is not correct, you must also check the time of the record and only if the time is later,
+                then you will remove.
+                 */
                 if(serverRing.hasServer(addr, port)) {
                     serverRing.removeServer(addr, port);
 

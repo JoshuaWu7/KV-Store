@@ -134,7 +134,7 @@ public class DeathRegistrar extends TimerTask {
         }
 
         /* Mark the gosipee as alive */
-        ring.setAllVnodesAlive(target);
+        ring.setServerAlive(target);
     }
 
     /**

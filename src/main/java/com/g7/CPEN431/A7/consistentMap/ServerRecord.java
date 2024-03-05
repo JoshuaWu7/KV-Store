@@ -13,7 +13,6 @@ import java.util.Objects;
 public class ServerRecord implements ServerEntry {
     private InetAddress address;
     private int port;
-    private long hash;
     private long informationTime;
     private int updateCode;
 
@@ -25,7 +24,7 @@ public class ServerRecord implements ServerEntry {
     public final static int CODE_ALI = 0x1;
     public final static int CODE_DED = 0x2;
 
-    public ServerRecord(InetAddress address, int port, int vnode_id) {
+    public ServerRecord(InetAddress address, int port) {
         this.address = address;
         this.port = port;
         this.portExists = true;
@@ -33,17 +32,21 @@ public class ServerRecord implements ServerEntry {
         this.informationTimeExists = true;
         this.updateCode = 1;
         this.updateCodeExists = true;
-
-        byte[] adr = address.getAddress();
-
-        ByteBuffer hashBuf = ByteBuffer.allocate(adr.length + (Integer.BYTES * 2));
-        hashBuf.put(adr);
-        hashBuf.putInt(port);
-        hashBuf.putInt(vnode_id);
-        hashBuf.flip();
-
-        this.hash = genHash(hashBuf.array());
     }
+
+    /* Clone a ServerRecord */
+    public ServerRecord(ServerRecord r)
+    {
+        this.address = r.address;
+        this.port = r.port;
+        this.portExists = r.portExists;
+        this.informationTime = r.informationTime;
+        this.informationTimeExists = r.informationTimeExists;
+        this.updateCode = r.updateCode;
+        this.updateCodeExists = r.updateCodeExists;
+    }
+
+
 
     /**
      * This is not for you to fucking use. It is for the message parser.
@@ -59,8 +62,6 @@ public class ServerRecord implements ServerEntry {
     public int getPort() {
         return port;
     }
-
-    public long getHash() {return hash;}
 
     @Override
     public boolean equals(Object o) {
@@ -78,31 +79,6 @@ public class ServerRecord implements ServerEntry {
         int result = address.hashCode();
         result = 31 * result + port;
         return result;
-    }
-
-    private long genHash(byte[] key) {
-        MessageDigest md5 = null;
-        try {
-            md5 = MessageDigest.getInstance("MD5");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        md5.reset();
-
-        byte[] dig = md5.digest(key);
-
-        long hash = (
-                (long) (dig[7] & 0xFF) << 56 |
-                        (long) (dig[6] & 0xFF) << 48 |
-                        (long) (dig[5] & 0xFF) << 40 |
-                        (long) (dig[4] & 0xFF) << 32 |
-                        (long) (dig[3] & 0xFF) << 24 |
-                        (long) (dig[2] & 0xFF) << 16 |
-                        (long) (dig[1] & 0xFF) << 8 |
-                        (long) (dig[0] & 0xFF)
-        );
-
-        return hash;
     }
 
     @Override
@@ -185,4 +161,6 @@ public class ServerRecord implements ServerEntry {
     }
 
     public class HashNotGeneratedException extends Exception {}
+
+
 }

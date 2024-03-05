@@ -1,9 +1,8 @@
 package com.g7.CPEN431.A7.consistentMap;
 
-import com.g7.CPEN431.A7.KVServer;
-
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,14 +20,15 @@ import static com.g7.CPEN431.A7.KVServer.self;
 import static com.g7.CPEN431.A7.KVServer.selfLoopback;
 
 public class ConsistentMap {
-    private final TreeMap<Long , ServerRecord> ring;
-    private final int vnodes;
+    private final TreeMap<Integer, VNode> ring;
+    private final int VNodes;
     private final ReadWriteLock lock;
-    private long current = 0;
+    private int current = 0;
 
-    public ConsistentMap(int vnodes, String serverPathName) throws IOException  {
+    /* TODO revamp for thread safety */
+    public ConsistentMap(int vNodes, String serverPathName) throws IOException  {
         this.ring = new TreeMap<>();
-        this.vnodes = vnodes;
+        this.VNodes = vNodes;
         this.lock = new ReentrantReadWriteLock();
 
         Path path = Paths.get(serverPathName);
@@ -40,45 +40,55 @@ public class ConsistentMap {
             InetAddress addr = InetAddress.getByName(serverNPort[0]);
             int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
 
-            ServerRecord serverRecord = addServer(addr, port);
+            ServerRecord serverRecord = addServerPrivate(addr, port);
 
             /* only activated during initialization, initializes current ptr */
             if(serverRecord.equals(self) || serverRecord.equals(selfLoopback))
             {
-                this.current = self.getHash() + 1;
+                this.current = new VNode(self, 0).getHash() + 1;
             }
         }
     }
 
-    public ServerRecord addServer(InetAddress address, int port)
+    public void addServer(InetAddress address, int port)
     {
-        ServerRecord vnode = null;
+        addServerPrivate(address, port);
+    }
+
+    private ServerRecord addServerPrivate(InetAddress address, int port)
+    {
+        ServerRecord newServer = new ServerRecord(address, port);
 
         lock.writeLock().lock();
-        for(int i = 0; i < vnodes; i++)
+        for(int i = 0; i < VNodes; i++)
         {
-            vnode = new ServerRecord(address, port, i);
+            VNode vnode = new VNode(newServer, i);
             ring.put(vnode.getHash(), vnode);
         }
         lock.writeLock().unlock();
 
-        return vnode;
+        return newServer;
     }
 
     public void removeServer(InetAddress address, int port)
     {
+        ServerRecord r = new ServerRecord(address, port);
+        removeServer(r);
+    }
+
+    /**
+     * This is now the standard method to remove servers
+     * @param r server record
+     */
+    public void removeServer(ServerRecord r)
+    {
         lock.writeLock().lock();
-        for(int i = 0; i < vnodes; i++)
+        for(int i = 0; i < VNodes; i++)
         {
-            long hashcode = new ServerRecord(address, port, i).getHash();
+            int hashcode = new VNode(r, i).getHash();
             ring.remove(hashcode);
         }
         lock.writeLock().unlock();
-    }
-
-    public void removeServer(ServerRecord r)
-    {
-        removeServer(r.getAddress(), r.getPort());
     }
 
     /* These are potentially unsafe if ServerRecords are modified */
@@ -90,15 +100,15 @@ public class ConsistentMap {
             throw new NoServersException();
         }
 
-        long hashcode = getHash(key);
+        int hashcode = getHash(key);
 
-        Map.Entry<Long, ServerRecord> server = ring.ceilingEntry(hashcode);
+        Map.Entry<Integer, VNode> server = ring.ceilingEntry(hashcode);
         /* Deal with case where the successor of the key is past "0" */
         server = (server == null) ? ring.firstEntry(): server;
 
         lock.readLock().unlock();
 
-        return server.getValue();
+        return new ServerRecord(server.getValue().getServerRecordClone());
     }
 
     public ServerRecord getRandomServer() throws NoServersException
@@ -110,15 +120,15 @@ public class ConsistentMap {
             throw new NoServersException();
         }
 
-        long hashcode = new Random().nextLong();
+        int hashcode = new Random().nextInt();
 
-        Map.Entry<Long, ServerRecord> server = ring.ceilingEntry(hashcode);
+        Map.Entry<Integer, VNode> server = ring.ceilingEntry(hashcode);
         /* Deal with case where the successor of the key is past "0" */
         server = (server == null) ? ring.firstEntry(): server;
 
         lock.readLock().unlock();
 
-        return server.getValue();
+        return server.getValue().getServerRecordClone();
     }
 
     public ServerRecord getNextServer() throws NoServersException {
@@ -130,7 +140,7 @@ public class ConsistentMap {
         }
 
 
-        Map.Entry<Long, ServerRecord> server = ring.ceilingEntry(current);
+        Map.Entry<Integer, VNode> server = ring.ceilingEntry(current);
         /* Deal with case where the successor of the key is past "0" */
         server = (server == null) ? ring.firstEntry(): server;
 
@@ -139,33 +149,29 @@ public class ConsistentMap {
 
         lock.readLock().unlock();
 
-        return server.getValue();
+        return server.getValue().getServerRecordClone();
     }
 
-    public void setAllVnodesAlive(ServerRecord r)
+    public void setServerAlive(ServerRecord r)
     {
         lock.writeLock().lock();
-        for(int i = 0; i < vnodes; i++)
+        for(int i = 0; i < VNodes; i++)
         {
-            long hashcode = new ServerRecord(r.getAddress(), r.getPort(), i).getHash();
-            ring.get(hashcode).setLastSeenNow();
+            int hashcode = new VNode(r, i).getHash();
+            ring.get(hashcode).serverRecord.setLastSeenNow();
         }
         lock.writeLock().unlock();
     }
 
-    private long getHash(byte[] key) throws NoSuchAlgorithmException {
+    private int getHash(byte[] key) throws NoSuchAlgorithmException {
         MessageDigest md5 = MessageDigest.getInstance("MD5");
         byte[] dig = md5.digest(key);
 
         return (
-                (long) (dig[7] & 0xFF) << 56 |
-                (long) (dig[6] & 0xFF) << 48 |
-                (long) (dig[5] & 0xFF) << 40 |
-                (long) (dig[4] & 0xFF) << 32 |
-                (long) (dig[3] & 0xFF) << 24 |
-                (long) (dig[2] & 0xFF) << 16 |
-                (long) (dig[1] & 0xFF) << 8 |
-                (long) (dig[0] & 0xFF)
+                (dig[3] & 0xFF) << 24 |
+                (dig[2] & 0xFF) << 16 |
+                (dig[1] & 0xFF) << 8 |
+                (dig[0] & 0xFF)
                 );
     }
     /**
@@ -175,14 +181,69 @@ public class ConsistentMap {
      * @return whether the server exist in the ring
      */
     public boolean hasServer(InetAddress addr, int port){
-        long hashcode = new ServerRecord(addr, port, 0).getHash();
+        long hashcode = new VNode(new ServerRecord(addr, port), 0).getHash();
         lock.readLock().lock();
         boolean hasKey = ring.containsKey(hashcode);
         lock.readLock().unlock();
         return hasKey;
     }
 
-public static class NoServersException extends Exception {}
+    public static class NoServersException extends Exception {}
+
+    static class VNode {
+        private ServerRecord serverRecord;
+        private int vnodeID;
+        private int hash;
+
+        public VNode(ServerRecord physicalServer, int vnodeID)
+        {
+            this.serverRecord = physicalServer;
+            this.vnodeID = vnodeID;
+
+            /* Compute the hash */
+            this.hash = genHashFromServer(physicalServer, vnodeID);
+        }
+
+        public ServerRecord getServerRecordClone() {
+            return new ServerRecord(serverRecord);
+        }
+
+        private int genHashFromServer(ServerRecord record, int vnodeID)
+        {
+            int adrLen = record.getAddress().getAddress().length;
+            ByteBuffer hashBuf = ByteBuffer.allocate(adrLen + (Integer.BYTES * 2));
+            hashBuf.put(record.getAddress().getAddress());
+            hashBuf.putInt(record.getPort());
+            hashBuf.putInt(vnodeID);
+            hashBuf.flip();
+            return genHash(hashBuf.array());
+        }
+
+        public int getHash() {
+            return hash;
+        }
+
+        private int genHash(byte[] key) {
+            MessageDigest md5;
+            try {
+                md5 = MessageDigest.getInstance("MD5");
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException(e);
+            }
+            md5.reset();
+
+            byte[] dig = md5.digest(key);
+
+            return hash = (
+                    (dig[3] & 0xFF) << 24 |
+                            (dig[2] & 0xFF) << 16 |
+                            (dig[1] & 0xFF) << 8 |
+                            (dig[0] & 0xFF)
+            );
+        }
+
+}
+
 
 }
 
