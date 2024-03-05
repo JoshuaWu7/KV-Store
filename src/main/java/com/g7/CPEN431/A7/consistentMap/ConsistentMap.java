@@ -202,12 +202,41 @@ public class ConsistentMap {
     public void setServerAlive(ServerRecord r)
     {
         lock.writeLock().lock();
-        for(int i = 0; i < VNodes; i++)
-        {
-            int hashcode = new VNode(r, i).getHash();
-            ring.get(hashcode).serverRecord.setLastSeenNow();
-        }
+        int hashcode = new VNode(r, 0).getHash();
+        ring.get(hashcode).serverRecord.setLastSeenNow();
         lock.writeLock().unlock();
+    }
+
+    public void setServerDeadNow(ServerRecord r)
+    {
+        lock.writeLock().lock();
+        int hashcode = new VNode(r, 0).getHash();
+        ring.get(hashcode).serverRecord.setLastSeenDeadNow();
+        lock.writeLock().unlock();
+    }
+
+    public void setServerInformationTime(ServerRecord r, long informationTime)
+    {
+        lock.writeLock().lock();
+        int hashcode = new VNode(r, 0).getHash();
+        ring.get(hashcode).serverRecord.setInformationTime(informationTime);
+        lock.writeLock().unlock();
+    }
+
+    public void setServerStatusCode(ServerRecord r, int statusCode)
+    {
+        lock.writeLock().lock();
+        int hashcode = new VNode(r, 0).getHash();
+        ring.get(hashcode).serverRecord.setCode(statusCode);
+        lock.writeLock().unlock();
+    }
+
+    public int getServerCount()
+    {
+        lock.readLock().lock();
+        int sz = ring.size();
+        lock.readLock().unlock();
+        return sz;
     }
 
     /**
@@ -242,7 +271,9 @@ public class ConsistentMap {
         return hasKey;
     }
 
-    public static class NoServersException extends Exception {}
+    public static class NoServersException extends IllegalStateException {}
+    class ServerDoesNotExistException extends IllegalStateException {};
+
 
     /**
      * A virtual node representing a physical server
@@ -323,7 +354,6 @@ public class ConsistentMap {
         }
 
 }
-
 
 }
 

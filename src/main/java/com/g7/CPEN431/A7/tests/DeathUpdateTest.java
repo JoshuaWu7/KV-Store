@@ -54,7 +54,7 @@ public class DeathUpdateTest {
     @DisplayName("Test stat code NEW")
     public void deathUpdateNews() throws UnknownHostException {
         List<ServerEntry> servers = new ArrayList<>();
-        ServerEntry s1 = new ServerRecord(server_addrs.get(0), 200, 0);
+        ServerEntry s1 = new ServerRecord(server_addrs.get(0), 200);
         servers.add(s1);
         payload.setServerRecord(servers);
 
@@ -70,7 +70,7 @@ public class DeathUpdateTest {
     @DisplayName("Test stat code OLD NEWS")
     public void deathUpdateOld() throws UnknownHostException {
         List<ServerEntry> servers = new ArrayList<>();
-        ServerEntry s1 = new ServerRecord(server_addrs.get(1), 200, 0);
+        ServerEntry s1 = new ServerRecord(server_addrs.get(1), 200);
         servers.add(s1);
         payload.setServerRecord(servers);
 

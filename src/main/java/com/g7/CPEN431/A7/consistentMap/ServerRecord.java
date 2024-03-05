@@ -21,6 +21,7 @@ public class ServerRecord implements ServerEntry {
     private boolean informationTimeExists = false;
     private boolean updateCodeExists = false;
 
+
     public final static int CODE_ALI = 0x1;
     public final static int CODE_DED = 0x2;
 
