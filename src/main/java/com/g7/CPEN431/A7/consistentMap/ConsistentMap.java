@@ -140,7 +140,7 @@ public class ConsistentMap {
 
         lock.readLock().unlock();
 
-        return new ServerRecord(server.getValue().getServerRecordClone());
+        return server.getValue().getServerRecordClone();
     }
 
     /**
@@ -196,48 +196,81 @@ public class ConsistentMap {
 
     /**
      * Sets the corresponding physical server's record time to the current time,
-     * and marks it as alive
+     * and marks it as alive. If it does not exist, the record will be added.
      * @param r Server record (can be clone) who's record is to be amended.
      */
-    public void setServerAlive(ServerRecord r)
-    {
+    public void setServerAlive(ServerRecord r) {
         lock.writeLock().lock();
         int hashcode = new VNode(r, 0).getHash();
-        ring.get(hashcode).serverRecord.setLastSeenNow();
+        VNode vnode = ring.get(hashcode);
+
+        if(vnode == null)
+        {
+            addServer(r.getAddress(), r.getPort());
+        }
+        else
+        {
+            vnode.serverRecord.setLastSeenNow();
+        }
+
         lock.writeLock().unlock();
     }
 
+    /**
+     * Sets the corresppnding server as dead. If the server does not exist, there are no side effects.
+     * @param r
+     */
     public void setServerDeadNow(ServerRecord r)
     {
         lock.writeLock().lock();
         int hashcode = new VNode(r, 0).getHash();
-        ring.get(hashcode).serverRecord.setLastSeenDeadNow();
+        VNode vnode = ring.get(hashcode);
+
+        if(vnode != null) {
+            vnode.serverRecord.setLastSeenDeadNow();
+        };
+
         lock.writeLock().unlock();
     }
 
+    /**
+     * Sets the server information time. No side effects if server does not exist
+     * @param r - Server record of physical server (can be clone, just match IP and port)
+     * @param informationTime - information time to be set
+     */
     public void setServerInformationTime(ServerRecord r, long informationTime)
     {
         lock.writeLock().lock();
         int hashcode = new VNode(r, 0).getHash();
-        ring.get(hashcode).serverRecord.setInformationTime(informationTime);
+        VNode vnode = ring.get(hashcode);
+
+        if(vnode != null)
+        {
+            vnode.serverRecord.setInformationTime(informationTime);
+        }
+
         lock.writeLock().unlock();
     }
 
+    /**
+     * Sets the server status code. No side fx if server does not exist.
+     * @param r - Server record of physical server (can be clone, match ip and port)
+     * @param statusCode new status code to set the server to.
+     */
     public void setServerStatusCode(ServerRecord r, int statusCode)
     {
         lock.writeLock().lock();
         int hashcode = new VNode(r, 0).getHash();
-        ring.get(hashcode).serverRecord.setCode(statusCode);
+        VNode vnode = ring.get(hashcode);
+
+        if(vnode != null)
+        {
+            vnode.serverRecord.setCode(statusCode);
+        }
+
         lock.writeLock().unlock();
     }
 
-    public int getServerCount()
-    {
-        lock.readLock().lock();
-        int sz = ring.size();
-        lock.readLock().unlock();
-        return sz;
-    }
 
     /**
      * Helper function to hash any byte array to int
@@ -272,7 +305,7 @@ public class ConsistentMap {
     }
 
     public static class NoServersException extends IllegalStateException {}
-    class ServerDoesNotExistException extends IllegalStateException {};
+    class ServerDoesNotExistException extends Exception {};
 
 
     /**
