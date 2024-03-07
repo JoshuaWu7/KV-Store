@@ -304,6 +304,37 @@ public class ConsistentMap {
         return hasKey;
     }
 
+    /**
+     * get server by address and port
+     * @param addr
+     * @param port
+     * @return
+     */
+    public ServerRecord getServerByAddress(InetAddress addr, int port){
+        Integer hashcode = new VNode(new ServerRecord(addr, port), 0).getHash();
+        lock.readLock().lock();
+        if(ring.isEmpty())
+        {
+            lock.readLock().unlock();
+            throw new NoServersException();
+        }
+
+        Map.Entry<Integer, VNode> server = ring.ceilingEntry(hashcode);
+        /* Deal with case where the successor of the key is past "0" */
+        server = (server == null) ? ring.firstEntry(): server;
+
+        lock.readLock().unlock();
+
+        return server.getValue().getServerRecordClone();
+    }
+
+    //TODO: by Paco
+    public int getServerCount() {
+        return 0;
+    }
+
+
+
     public static class NoServersException extends IllegalStateException {}
     class ServerDoesNotExistException extends Exception {};
 
