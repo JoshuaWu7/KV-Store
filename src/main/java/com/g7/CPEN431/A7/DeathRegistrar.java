@@ -21,18 +21,17 @@ public class DeathRegistrar extends TimerTask {
     ConsistentMap ring;
     KVClient sender;
     Random random;
+    ServerRecord self;
     final static int K = 6;
 
-
-
-
-    public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring)
+    public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring, ServerRecord self)
     throws IOException {
         this.deathRecord = new HashMap<>();
         this.pendingRecords = pendingRecords;
         this.ring = ring;
         this.sender = new KVClient(null, 0, new DatagramSocket(), new byte[16384]);
         this.random = new Random();
+        this.self = self;
     }
 
     @Override
@@ -40,7 +39,6 @@ public class DeathRegistrar extends TimerTask {
         updateDeathRecords();
         checkIsAlive();
         gossip();
-
     }
 
     private void updateDeathRecords()
@@ -145,6 +143,8 @@ public class DeathRegistrar extends TimerTask {
     private void checkIsAlive() {
         ServerRecord target = null;
 
+        // TODO: Add code to the timer to detect when the server was suspended / disconnected. If the server was
+        //  suspended, then send self IAmAlive to gossip broadcast.
         try {
             target = ring.getNextServer();
 
@@ -161,13 +161,19 @@ public class DeathRegistrar extends TimerTask {
             throw new RuntimeException(e);
         } catch (KVClient.ServerTimedOutException e) {
             // Update server death time to current time, then add to list of deaths
-            ring.setServerInformationTime(target, System.currentTimeMillis());
-            ring.setServerStatusCode(target, CODE_DED);
-
+            ring.setServerDeadNow(target);
             ring.removeServer(target);
-
-
             deathRecord.put(target, target);
+
+            // Send self isAlive to gossip broadcast
+            sender.setDestination(self.getAddress(), self.getServerPort());
+            try {
+                sender.isAlive();
+            } catch (IOException | KVClient.ServerTimedOutException | KVClient.MissingValuesException |
+                     InterruptedException ex) {
+                throw new RuntimeException(ex);
+            }
+
         }
     }
 }
