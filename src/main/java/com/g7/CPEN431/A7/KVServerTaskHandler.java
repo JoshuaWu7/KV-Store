@@ -60,8 +60,8 @@ public class KVServerTaskHandler implements Runnable {
     final private ConcurrentLinkedQueue<ServerRecord>pendingRecordDeaths;
 
     /* Constants */
-    final static int KEY_MAX_LEN = 32;
-    final static int VALUE_MAX_LEN = 10_000;
+    public final static int KEY_MAX_LEN = 32;
+    public final static int VALUE_MAX_LEN = 10_000;
     public final static int CACHE_OVL_WAIT_TIME = 80;   // Temporarily unused since cache doesn't overflow
     public final static int THREAD_OVL_WAIT_TIME = 16;
     public final static int MAP_SZ = 60_817_408;
@@ -134,6 +134,19 @@ public class KVServerTaskHandler implements Runnable {
         this.pendingRecordDeaths = pendingRecordDeaths;
     }
 
+    public KVServerTaskHandler(ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock mapLock, AtomicInteger bytesUsed){
+        this.iPacket = null;
+        this.requestCache = null;
+        this.map = map;
+        this.mapLock = mapLock;
+        this.bytesUsed = bytesUsed;
+        this.bytePool = null;
+        this.isOverloaded = false;
+        this.outbound = null;
+        this.serverRing = null;
+        this.pendingRecordDeaths = null;
+    }
+
 
     @Override
     public void run()
@@ -148,6 +161,9 @@ public class KVServerTaskHandler implements Runnable {
             // Return shared objects to the pool
             bytePool.offer(iPacket.getData());
         }
+    }
+    public ConcurrentMap<KeyWrapper, ValueWrapper> getMap(){
+        return this.map;
     }
 
     /**
@@ -292,7 +308,7 @@ public class KVServerTaskHandler implements Runnable {
             case REQ_CODE_PID: res = handleGetPID(scaf, payload); break;
             case REQ_CODE_MEM: res = handleGetMembershipCount(scaf, payload);  break;
             case REQ_CODE_DED: res = handleDeathUpdate(scaf, payload); break;
-            case REQ_CODE_BULKPUT: res = handlePutBulk(scaf, payload); break;
+            case REQ_CODE_BULKPUT: res = handleBulkPut(scaf, payload); break;
 
             default: {
                 RequestCacheValue val = scaf.setResponseType(INVALID_OPCODE).build();
@@ -494,7 +510,6 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         mapLock.readLock().lock();
-        mapLock.writeLock().lock();
 
         //atomically put and respond, `tis thread safe.
         AtomicReference<IOException> ioexception= new AtomicReference<>();
@@ -505,7 +520,6 @@ public class KVServerTaskHandler implements Runnable {
             bytesUsed.addAndGet(payload.getValue().length);
             return new ValueWrapper(payload.getValue(), payload.getVersion());
         });
-        mapLock.writeLock().lock();
         mapLock.readLock().unlock();
 
         return pkt.get();
@@ -517,9 +531,23 @@ public class KVServerTaskHandler implements Runnable {
      * @param payload Payload from the client
      * @return The packet sent
      */
-    private DatagramPacket handlePutBulk (RequestCacheValue.Builder scaf, UnwrappedPayload payload) {
-        List<Integer> serverStatusCodes = new ArrayList<>();
+    private DatagramPacket handleBulkPut (RequestCacheValue.Builder scaf, UnwrappedPayload payload) {
         List<PutPair> pairs = payload.getPutPair();
+        List<Integer> serverStatusCodes = bulkPutHelper(pairs);
+
+        RequestCacheValue res = scaf.setServerStatusCodes(serverStatusCodes).build();
+        AtomicReference<DatagramPacket> pkt = new AtomicReference<>();
+        pkt.set(generateAndSend(res));
+
+        return pkt.get();
+    }
+
+    public List<Integer> bulkPutHelper(List<PutPair> pairs){
+        assert map != null;
+        assert mapLock != null;
+        assert bytesUsed != null;
+
+        List<Integer> serverStatusCodes = new ArrayList<>();
         for (PutPair pair: pairs) {
             if(!pair.hasKey() || !pair.hasValue())
             {
@@ -551,23 +579,16 @@ public class KVServerTaskHandler implements Runnable {
             }
 
             mapLock.readLock().lock();
-            mapLock.writeLock().lock();
 
             map.compute(new KeyWrapper(pair.getKey()), (key, value) -> {
                 serverStatusCodes.add(RES_CODE_SUCCESS);
-                bytesUsed.addAndGet(payload.getValue().length);
-                return new ValueWrapper(payload.getValue(), payload.getVersion());
+                bytesUsed.addAndGet(pair.getValue().length);
+                return new ValueWrapper(pair.getValue(), 0);
             });
 
-            mapLock.writeLock().lock();
             mapLock.readLock().unlock();
         }
-
-        RequestCacheValue res = scaf.setServerStatusCodes(serverStatusCodes).build();
-        AtomicReference<DatagramPacket> pkt = new AtomicReference<>();
-        pkt.set(generateAndSend(res));
-
-        return pkt.get();
+        return serverStatusCodes;
     }
 
     /**
@@ -687,7 +708,7 @@ public class KVServerTaskHandler implements Runnable {
     {
         /* retrieve the list of obituaries that the sender knows */
         List<ServerEntry> deadServers = payload.getServerRecord();
-        List<Integer> serverStatusCodes = getDeathCodes(deadServers);
+        List<Integer> serverStatusCodes = getDeathCodes(deadServers, self);
 
         DatagramPacket pkt = null;
         ValueWrapper value = null;
@@ -699,12 +720,12 @@ public class KVServerTaskHandler implements Runnable {
     }
 
     // TODO: needs to be changed back to private after testing
-    public List<Integer> getDeathCodes(List<ServerEntry> deadServers) {
+    public List<Integer> getDeathCodes(List<ServerEntry> deadServers, ServerRecord us) {
         List<Integer> serverStatusCodes = new ArrayList<>();
 
         for (ServerEntry server: deadServers) {
             //verify that the server in the death update is not us
-            if (!self.equals(server)) {
+            if (!us.equals(server)) {
                 try {
                     /* retrieve server address and port */
                     InetAddress addr = InetAddress.getByAddress(server.getServerAddress());
@@ -721,7 +742,7 @@ public class KVServerTaskHandler implements Runnable {
 
                         /* remove the server from the ring and add to the pending queue if the server is in the ring (receiving news) and if
                          * the server record on the ring has been added before the death update */
-                        if (serverRing.hasServer(addr, port) && serverRing.getServerByAddress(addr, port).getInformationTime() > server.getInformationTime()) {
+                        if (serverRing.hasServer(addr, port) && serverRing.getServerByAddress(addr, port).getInformationTime() < server.getInformationTime()) {
 
                             serverRing.removeServer(addr, port);
                             pendingRecordDeaths.add((ServerRecord) server);

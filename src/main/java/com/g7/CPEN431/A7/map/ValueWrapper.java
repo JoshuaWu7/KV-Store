@@ -2,6 +2,8 @@ package com.g7.CPEN431.A7.map;
 
 import net.openhft.chronicle.bytes.BytesMarshallable;
 
+import java.util.Arrays;
+
 public class ValueWrapper implements BytesMarshallable {
 
 
@@ -19,6 +21,14 @@ public class ValueWrapper implements BytesMarshallable {
 
     public int getVersion() {
         return version;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ValueWrapper that = (ValueWrapper) o;
+        return Arrays.equals(that.getValue(), value) && that.getVersion() == version;
     }
 
 }

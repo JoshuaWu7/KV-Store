@@ -78,6 +78,7 @@ public class ConsistentMap {
     private ServerRecord addServerPrivate(InetAddress address, int port)
     {
         ServerRecord newServer = new ServerRecord(address, port);
+        newServer.setInformationTime(System.currentTimeMillis());
 
         lock.writeLock().lock();
         for(int i = 0; i < VNodes; i++)
@@ -297,7 +298,7 @@ public class ConsistentMap {
      * @return whether the server exist in the ring
      */
     public boolean hasServer(InetAddress addr, int port){
-        long hashcode = new VNode(new ServerRecord(addr, port), 0).getHash();
+        int hashcode = new VNode(new ServerRecord(addr, port), 0).getHash();
         lock.readLock().lock();
         boolean hasKey = ring.containsKey(hashcode);
         lock.readLock().unlock();
