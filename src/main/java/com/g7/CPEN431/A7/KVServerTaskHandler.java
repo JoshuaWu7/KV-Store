@@ -320,6 +320,11 @@ public class KVServerTaskHandler implements Runnable {
         KVMsg deserialized = KVMsgSerializer.parseFrom(new KVMsgFactory(),
                 incomingPublicBuffer.readPacketFromPB());
 
+        if(!deserialized.hasMessageID() || !deserialized.hasPayload() || !deserialized.hasCheckSum())
+        {
+            throw new IOException("Message does not have required elements, skipping handling");
+        }
+
         byte[] id = deserialized.getMessageID();
         byte[] pl = deserialized.getPayload();
 

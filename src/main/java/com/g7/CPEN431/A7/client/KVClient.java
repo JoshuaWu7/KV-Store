@@ -61,7 +61,7 @@ public class KVClient {
         this.socket = socket;
         this.publicBuf = publicBuf;
 
-        socket.setSoTimeout(300);
+        socket.setSoTimeout(100);
     }
 
     public KVClient(InetAddress serverAddress, int serverPort, DatagramSocket socket, byte[] publicBuf, int testSequence) {
@@ -329,7 +329,7 @@ public class KVClient {
         messageOnWire = req;
 
         UnwrappedMessage res = null;
-        while (tries < 4 && !success)
+        while (tries < 5 && !success)
         {
             socket.send(p);
             try {
@@ -365,8 +365,7 @@ public class KVClient {
 
         socket.setSoTimeout(initTimeout);
 
-        if(tries == 4 && !success) {
-            System.out.println("Did not receive response after 3 tries");
+        if(tries == 5 && !success) {
             throw new ServerTimedOutException();
         }
 

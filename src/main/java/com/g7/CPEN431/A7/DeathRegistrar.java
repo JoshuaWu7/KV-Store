@@ -91,7 +91,8 @@ public class DeathRegistrar extends TimerTask {
             r = sender.isDead(l);
         } catch (KVClient.ServerTimedOutException e)
         {
-            System.out.println("gossipee is dead");
+            System.out.println("Server declared dead by gossip response");
+            System.out.println("Port: " + target.getPort());
             ring.setServerDeadNow(target);
             ring.removeServer(target);
             deathRecord.put(target, target);
@@ -161,12 +162,12 @@ public class DeathRegistrar extends TimerTask {
             throw new RuntimeException(e);
         } catch (KVClient.ServerTimedOutException e) {
             // Update server death time to current time, then add to list of deaths
+            System.out.println("Server declared dead by isAlive ping");
+            System.out.println("Port: " + target.getPort());
+
             ring.setServerInformationTime(target, System.currentTimeMillis());
             ring.setServerStatusCode(target, CODE_DED);
-
             ring.removeServer(target);
-
-
             deathRecord.put(target, target);
         }
     }
