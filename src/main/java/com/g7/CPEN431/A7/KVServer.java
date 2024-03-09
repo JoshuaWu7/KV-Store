@@ -121,7 +121,7 @@ public class KVServer
 
             /* set up the timer */
             Timer timer = new Timer();
-            timer.scheduleAtFixedRate(new DeathRegistrar(pendingRecordDeaths, serverRing, self), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
+            timer.scheduleAtFixedRate(new DeathRegistrar(pendingRecordDeaths, serverRing), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
 
             while(true){
 

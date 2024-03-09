@@ -21,19 +21,18 @@ public class DeathRegistrar extends TimerTask {
     ConsistentMap ring;
     KVClient sender;
     Random random;
-    ServerRecord self;
+
     long previousPingSendTime;
     final static int SUSPENDED_THRESHOLD = 300;
     final static int K = 6;
 
-    public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring, ServerRecord self)
+    public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring)
     throws IOException {
         this.deathRecord = new HashMap<>();
         this.pendingRecords = pendingRecords;
         this.ring = ring;
         this.sender = new KVClient(null, 0, new DatagramSocket(), new byte[16384]);
         this.random = new Random();
-        this.self = self;
         this.previousPingSendTime = -1;
     }
 
@@ -186,6 +185,8 @@ public class DeathRegistrar extends TimerTask {
                 // TODO: check for self loopback
                 self.setLastSeenNow();
                 ring.setServerAlive(self);
+
+                deathRecord.put(self, self);
             }
         }
     }
