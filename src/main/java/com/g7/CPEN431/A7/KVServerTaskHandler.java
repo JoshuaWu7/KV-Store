@@ -34,6 +34,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import static com.g7.CPEN431.A7.KVServer.self;
 import static com.g7.CPEN431.A7.KVServer.selfLoopback;
 import static com.g7.CPEN431.A7.cache.ResponseType.*;
+import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_ALI;
+import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_DED;
 
 public class KVServerTaskHandler implements Runnable {
     /* Thread parameters */
@@ -96,7 +98,6 @@ public class KVServerTaskHandler implements Runnable {
     public final static int STAT_CODE_OLD = 0x01;
     public final static int STAT_CODE_NEW = 0x02;
 
-    public final static int STAT_CODE_ALI = 0x03;
 
     public KVServerTaskHandler(DatagramPacket iPacket,
                                Cache<RequestCacheKey, DatagramPacket> requestCache,
@@ -120,7 +121,7 @@ public class KVServerTaskHandler implements Runnable {
         this.pendingRecordDeaths = pendingRecordDeaths;
     }
 
-    // TODO: empty constructor for testing
+    // empty constructor for testing DeathUpdateTest
     public KVServerTaskHandler(ConsistentMap serverRing, ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths) {
         this.iPacket = null;
         this.requestCache = null;
@@ -134,6 +135,7 @@ public class KVServerTaskHandler implements Runnable {
         this.pendingRecordDeaths = pendingRecordDeaths;
     }
 
+    // empty constructor for testing BulkPutTest
     public KVServerTaskHandler(ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock mapLock, AtomicInteger bytesUsed){
         this.iPacket = null;
         this.requestCache = null;
@@ -162,6 +164,8 @@ public class KVServerTaskHandler implements Runnable {
             bytePool.offer(iPacket.getData());
         }
     }
+
+    // used for testing in BulkPutTest
     public ConcurrentMap<KeyWrapper, ValueWrapper> getMap(){
         return this.map;
     }
@@ -570,7 +574,7 @@ public class KVServerTaskHandler implements Runnable {
 
             if(bytesUsed.get() >= MAP_SZ) {
                 serverStatusCodes.add(RES_CODE_NO_MEM);
-                //TODO UNSAFE, but shitty client so whatever...
+                // unsafe, copied from handlePut
                 mapLock.writeLock().lock();
                 map.clear();
                 bytesUsed.set(0);
@@ -722,7 +726,7 @@ public class KVServerTaskHandler implements Runnable {
     // TODO: needs to be changed back to private after testing
     public List<Integer> getDeathCodes(List<ServerEntry> deadServers, ServerRecord us) {
         List<Integer> serverStatusCodes = new ArrayList<>();
-
+        assert pendingRecordDeaths != null;
         for (ServerEntry server: deadServers) {
             //verify that the server in the death update is not us
             if (!us.equals(server)) {
@@ -731,9 +735,11 @@ public class KVServerTaskHandler implements Runnable {
                     InetAddress addr = InetAddress.getByAddress(server.getServerAddress());
                     int port = server.getServerPort();
 
-                    if (server.getCode() == STAT_CODE_ALI) {
+                    if (server.getCode() == CODE_ALI) {
                         if (!serverRing.hasServer(addr, port)) {
+                            server.setInformationTime(System.currentTimeMillis());
                             serverRing.addServer(addr, port);
+                            pendingRecordDeaths.add((ServerRecord) server);
                             serverStatusCodes.add(STAT_CODE_NEW);
                         } else {
                             serverStatusCodes.add(STAT_CODE_OLD);
@@ -757,9 +763,14 @@ public class KVServerTaskHandler implements Runnable {
                     System.err.println("Unknown Host, cannot remove server: " + uhe.getMessage());
                 }
             } else {
-                serverStatusCodes.add(STAT_CODE_ALI);
+                if (server.getCode() == CODE_DED) {
+                    us.setCode(CODE_ALI);
+                    pendingRecordDeaths.add(us);
+                    serverStatusCodes.add(STAT_CODE_NEW);
+                } else {
+                    serverStatusCodes.add(STAT_CODE_OLD);
+                }
             }
-
         }
 
         return serverStatusCodes;
