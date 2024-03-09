@@ -28,6 +28,8 @@ public class ConsistentMap {
     private final ReadWriteLock lock;
     private int current = 0;
 
+    private int serverCount;
+
     /**
      *
      * @param vNodes number of vnodes in the consistent hashing scheme
@@ -38,6 +40,7 @@ public class ConsistentMap {
         this.ring = new TreeMap<>();
         this.VNodes = vNodes;
         this.lock = new ReentrantReadWriteLock();
+        serverCount = 0;
 
         // Parse the txt file with all servers.
         Path path = Paths.get(serverPathName);
@@ -78,7 +81,6 @@ public class ConsistentMap {
     private ServerRecord addServerPrivate(InetAddress address, int port)
     {
         ServerRecord newServer = new ServerRecord(address, port);
-        newServer.setInformationTime(System.currentTimeMillis());
 
         lock.writeLock().lock();
         for(int i = 0; i < VNodes; i++)
@@ -86,6 +88,7 @@ public class ConsistentMap {
             VNode vnode = new VNode(newServer, i);
             ring.put(vnode.getHash(), vnode);
         }
+        serverCount++;
         lock.writeLock().unlock();
 
         return newServer;
@@ -115,6 +118,7 @@ public class ConsistentMap {
             int hashcode = new VNode(r, i).getHash();
             ring.remove(hashcode);
         }
+        serverCount--;
         lock.writeLock().unlock();
     }
 
@@ -329,9 +333,12 @@ public class ConsistentMap {
         return server.getValue().getServerRecordClone();
     }
 
-    //TODO: by Paco
+    /**
+     * Get number of servers in the ring
+     * @return number of servers
+     */
     public int getServerCount() {
-        return 0;
+        return this.serverCount;
     }
 
 

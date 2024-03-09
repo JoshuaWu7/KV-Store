@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static com.g7.CPEN431.A7.KVServerTaskHandler.*;
+import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_ALI;
+import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_DED;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DeathUpdateTest {
@@ -56,11 +58,12 @@ public class DeathUpdateTest {
     }
 
     @Test
-    @DisplayName("Test stat code NEW")
+    @DisplayName("Test stat code NEW for dead server")
     public void deathUpdateNews() throws UnknownHostException {
         List<ServerEntry> servers = new ArrayList<>();
         ServerEntry s1 = new ServerRecord(server_addrs.get(0), 200);
         s1.setInformationTime(System.currentTimeMillis() + 1000);
+        s1.setCode(CODE_DED);
         servers.add(s1);
         payload.setServerRecord(servers);
 
@@ -77,30 +80,36 @@ public class DeathUpdateTest {
     public void deathUpdateOldNotOnRing() throws UnknownHostException {
 
         ServerEntry s1 = new ServerRecord(server_addrs.get(1), 200);
+        s1.setCode(CODE_DED);
         servers.add(s1);
         payload.setServerRecord(servers);
 
         List<Integer> codes = taskHandler.getDeathCodes(servers, self);
         assertEquals(codes.get(0), STAT_CODE_OLD);
+        assertFalse(ring.hasServer(server_addrs.get(1), 200));
+        assertEquals(pendingRecordDeaths.size(), 0);
     }
 
     @Test
     @DisplayName("Test stat code OLD NEWS when dead server rejoins")
     public void deathUpdateOldRejoins() throws UnknownHostException {
         ServerEntry s1 = new ServerRecord(server_addrs.get(2), 200);
+        s1.setCode(CODE_DED);
         s1.setInformationTime(System.currentTimeMillis() - 1000);
         servers.add(s1);
         payload.setServerRecord(servers);
 
         List<Integer> codes = taskHandler.getDeathCodes(servers, self);
         assertEquals(codes.get(0), STAT_CODE_OLD);
+        assertTrue(ring.hasServer(server_addrs.get(2), 200));
+        assertEquals(pendingRecordDeaths.size(), 0);
     }
 
     @Test
-    @DisplayName("Test dead server rejoin with STAT_CODE_ALI")
+    @DisplayName("Test dead server rejoin with CODE_ALI")
     public void deadServerRejoinTest() throws UnknownHostException {
         ServerEntry s1 = new ServerRecord(server_addrs.get(1), 200);
-        s1.setCode(STAT_CODE_ALI);
+        s1.setCode(ServerRecord.CODE_ALI);
         servers.add(s1);
         payload.setServerRecord(servers);
 
@@ -108,13 +117,15 @@ public class DeathUpdateTest {
         List<Integer> codes = taskHandler.getDeathCodes(servers, self);
         assertEquals(codes.get(0), STAT_CODE_NEW);
         assertTrue(ring.hasServer(server_addrs.get(1), 200));
+        assert pendingRecordDeaths.peek() != null;
+        assertEquals(pendingRecordDeaths.peek(), s1);
     }
 
     @Test
-    @DisplayName("Test dead server rejoin with STAT_CODE_ALI")
+    @DisplayName("Test dead server rejoin with CODE_ALI but is on ring already")
     public void aliveServerRejoinTest() throws UnknownHostException {
         ServerEntry s1 = new ServerRecord(server_addrs.get(0), 200);
-        s1.setCode(STAT_CODE_ALI);
+        s1.setCode(ServerRecord.CODE_ALI);
         servers.add(s1);
         payload.setServerRecord(servers);
 
@@ -122,18 +133,36 @@ public class DeathUpdateTest {
         List<Integer> codes = taskHandler.getDeathCodes(servers, self);
         assertEquals(codes.get(0), STAT_CODE_OLD);
         assertTrue(ring.hasServer(server_addrs.get(0), 200));
+        assertEquals(pendingRecordDeaths.size(), 0);
     }
 
     @Test
-    @DisplayName("Test dead server rejoin with STAT_CODE_ALI")
+    @DisplayName("Test self is on death list")
     public void selfServerNotifiedDeathTest() throws UnknownHostException {
+        ServerEntry s1 = self;
+        s1.setCode(CODE_DED);
+        servers.add(s1);
+        payload.setServerRecord(servers);
+
+        assertTrue(ring.hasServer(self.getAddress(), 200));
+        List<Integer> codes = taskHandler.getDeathCodes(servers, self);
+        assertEquals(codes.get(0), STAT_CODE_NEW);
+        assertTrue(ring.hasServer(self.getAddress(), 200));
+        assert pendingRecordDeaths.peek() != null;
+        assertEquals(pendingRecordDeaths.peek(), s1);
+    }
+
+    @Test
+    @DisplayName("Test self is on death list with code_ali")
+    public void selfServerNotifiedDeathTestAlive() throws UnknownHostException {
         ServerEntry s1 = self;
         servers.add(s1);
         payload.setServerRecord(servers);
 
         assertTrue(ring.hasServer(self.getAddress(), 200));
         List<Integer> codes = taskHandler.getDeathCodes(servers, self);
-        assertEquals(codes.get(0), STAT_CODE_ALI);
+        assertEquals(codes.get(0), STAT_CODE_OLD);
         assertTrue(ring.hasServer(self.getAddress(), 200));
+        assertEquals(pendingRecordDeaths.size(), 0);
     }
 }
