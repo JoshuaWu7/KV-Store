@@ -8,11 +8,11 @@ import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static com.g7.CPEN431.A7.KVServer.self;
-import static com.g7.CPEN431.A7.KVServer.selfLoopback;
+import static com.g7.CPEN431.A7.KVServer.*;
 import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_DED;
 
 public class DeathRegistrar extends TimerTask {
@@ -22,6 +22,8 @@ public class DeathRegistrar extends TimerTask {
     KVClient sender;
     Random random;
     ServerRecord self;
+    long previousPingSendTime;
+    final static int SUSPENDED_THRESHOLD = 300;
     final static int K = 6;
 
     public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring, ServerRecord self)
@@ -32,11 +34,13 @@ public class DeathRegistrar extends TimerTask {
         this.sender = new KVClient(null, 0, new DatagramSocket(), new byte[16384]);
         this.random = new Random();
         this.self = self;
+        this.previousPingSendTime = -1;
     }
 
     @Override
     public void run() {
         updateDeathRecords();
+        checkSelfSuspended();
         checkIsAlive();
         gossip();
     }
@@ -143,8 +147,6 @@ public class DeathRegistrar extends TimerTask {
     private void checkIsAlive() {
         ServerRecord target = null;
 
-        // TODO: Add code to the timer to detect when the server was suspended / disconnected. If the server was
-        //  suspended, then send self IAmAlive to gossip broadcast.
         try {
             target = ring.getNextServer();
 
@@ -153,6 +155,8 @@ public class DeathRegistrar extends TimerTask {
             {
                 return;
             }
+
+            previousPingSendTime = Instant.now().toEpochMilli();
 
             sender.setDestination(target.getAddress(), target.getServerPort());
             sender.isAlive();
@@ -164,16 +168,25 @@ public class DeathRegistrar extends TimerTask {
             ring.setServerDeadNow(target);
             ring.removeServer(target);
             deathRecord.put(target, target);
+        }
+    }
 
-            // Send self isAlive to gossip broadcast
-            sender.setDestination(self.getAddress(), self.getServerPort());
-            try {
-                sender.isAlive();
-            } catch (IOException | KVClient.ServerTimedOutException | KVClient.MissingValuesException |
-                     InterruptedException ex) {
-                throw new RuntimeException(ex);
+    /**
+     * This function checks if the current server has been suspended, i.e. the time since it last sent
+     * a ping is greater than 800 ms. If so, updates the server to be alive so that it can be broadcasted
+     * next time.
+     *
+     * This function does nothing if the current server has not yet sent a ping before.
+     */
+    private void checkSelfSuspended() {
+        if (previousPingSendTime > 0) {
+            long currentTime = Instant.now().toEpochMilli();
+
+            if (previousPingSendTime - currentTime > GOSSIP_INTERVAL + SUSPENDED_THRESHOLD) {
+                // TODO: check for self loopback
+                self.setLastSeenNow();
+                ring.setServerAlive(self);
             }
-
         }
     }
 }
