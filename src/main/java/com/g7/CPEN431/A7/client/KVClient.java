@@ -4,6 +4,7 @@ package com.g7.CPEN431.A7.client;
 import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgFactory;
 import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgSerializer;
 import com.g7.CPEN431.A7.newProto.KVRequest.KVRequestSerializer;
+import com.g7.CPEN431.A7.newProto.KVRequest.PutPair;
 import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
 import com.g7.CPEN431.A7.newProto.KVResponse.KVResponseSerializer;
 import com.g7.CPEN431.A7.newProto.KVResponse.ServerResponseFactory;
@@ -43,6 +44,7 @@ public class KVClient {
     public final static int REQ_CODE_PID = 0X07;
     public final static int REQ_CODE_MEM = 0X08;
     public final static int REQ_CODE_DED = 0x100;
+    public final static int REQ_CODE_BULKPUT = 0x200;
 
     public final static int RES_CODE_SUCCESS = 0x0;
     public final static int RES_CODE_NO_KEY = 0x1;
@@ -186,6 +188,7 @@ public class KVClient {
 
         return sendAndReceiveServerResponse(pl);
     }
+
     private ServerResponse get(byte[] key) throws IOException, MissingValuesException, ServerTimedOutException, InterruptedException {
         /* Generate isAlive Message */
         UnwrappedPayload pl = new UnwrappedPayload();
@@ -203,6 +206,14 @@ public class KVClient {
 
         return res;
     }
+
+    public ServerResponse bulkPut(List<PutPair> pairs) throws IOException, ServerTimedOutException, MissingValuesException, InterruptedException {
+        UnwrappedPayload pl = new UnwrappedPayload();
+        pl.setCommand(REQ_CODE_BULKPUT);
+        pl.setPutPair(pairs);
+        return sendAndReceiveServerResponse(pl);
+    }
+
     private ServerResponse put(byte[] key, byte[] value, int version) throws IOException, ServerTimedOutException, MissingValuesException, InterruptedException {
         /* Generate isAlive Message */
         UnwrappedPayload pl = new UnwrappedPayload();

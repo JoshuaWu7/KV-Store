@@ -3,6 +3,7 @@ package com.g7.CPEN431.A7;
 import com.g7.CPEN431.A7.cache.RequestCacheKey;
 import com.g7.CPEN431.A7.cache.RequestCacheValue;
 import com.g7.CPEN431.A7.cache.ResponseType;
+import com.g7.CPEN431.A7.client.KVClient;
 import com.g7.CPEN431.A7.consistentMap.ConsistentMap;
 import com.g7.CPEN431.A7.consistentMap.ServerRecord;
 import com.g7.CPEN431.A7.map.KeyWrapper;
@@ -734,6 +735,7 @@ public class KVServerTaskHandler implements Runnable {
                     if (server.getCode() == STAT_CODE_ALI) {
                         if (!serverRing.hasServer(addr, port)) {
                             serverRing.addServer(addr, port);
+                            transferKeys(addr, port);
                             serverStatusCodes.add(STAT_CODE_NEW);
                         } else {
                             serverStatusCodes.add(STAT_CODE_OLD);
@@ -763,6 +765,72 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         return serverStatusCodes;
+    }
+
+    /**
+     * Finds keys for which current server is successor and transfers them to the new server
+     * @param address IP address of server to add
+     * @param port of the server to add
+     */
+
+    private void transferKeys(InetAddress address, int port) {
+        List<PutPair> pairs = new ArrayList<>();
+
+        mapLock.readLock().unlock();
+
+        this.map.forEach((keyWrapper, valueWrapper) -> {
+            byte[] key = keyWrapper.getKey();
+            byte[] value = valueWrapper.getValue();
+
+            try {
+                ServerRecord destination = serverRing.getServer(key);
+
+                //New server is taking over this node
+                if (!self.equals(destination)) {
+                    PutPair pair = new KVPair();
+                    pair.setKey(key);
+                    pair.setValue(value);
+                    pairs.add(pair);
+                }
+            } catch (NoSuchAlgorithmException e) {
+                System.err.println("Could not generate hash");
+                System.err.println("Doing nothing");
+                return;
+            }
+        });
+
+        mapLock.readLock().unlock();
+
+        if (pairs.size() > 0) {
+            try {
+                KVClient sender = new KVClient(address, 0, new DatagramSocket(), new byte[16384]);
+                sender.bulkPut(pairs);
+            } catch (Exception e){
+                System.out.println("Error sending bulk put to transfer keys");
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Sends all keys to new node if current server is successor
+     * @param scaf: response object builder
+     * @param payload: the payload from the request
+     * @return the return packet sent back to the sender
+     */
+    private DatagramPacket handleServerJoin(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
+    {
+        /* retrieve the list of obituaries that the sender knows */
+        List<ServerEntry> deadServers = payload.getServerRecord();
+        List<Integer> serverStatusCodes = getDeathCodes(deadServers, self);
+
+        DatagramPacket pkt = null;
+        ValueWrapper value = null;
+
+        /* create response packet for receiving news */
+        RequestCacheValue response = scaf.setResponseType(OBITUARIES).setServerStatusCodes(serverStatusCodes).build();
+        pkt = generateAndSend(response);
+        return pkt;
     }
 
 
