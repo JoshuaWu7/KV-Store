@@ -28,6 +28,8 @@ public class ConsistentMap {
     private final ReadWriteLock lock;
     private int current = 0;
 
+    private int serverCount;
+
     /**
      *
      * @param vNodes number of vnodes in the consistent hashing scheme
@@ -38,6 +40,7 @@ public class ConsistentMap {
         this.ring = new TreeMap<>();
         this.VNodes = vNodes;
         this.lock = new ReentrantReadWriteLock();
+        serverCount = 0;
 
         // Parse the txt file with all servers.
         Path path = Paths.get(serverPathName);
@@ -85,6 +88,7 @@ public class ConsistentMap {
             VNode vnode = new VNode(newServer, i);
             ring.put(vnode.getHash(), vnode);
         }
+        serverCount++;
         lock.writeLock().unlock();
 
         return newServer;
@@ -114,6 +118,7 @@ public class ConsistentMap {
             int hashcode = new VNode(r, i).getHash();
             ring.remove(hashcode);
         }
+        serverCount--;
         lock.writeLock().unlock();
     }
 
@@ -303,6 +308,40 @@ public class ConsistentMap {
         lock.readLock().unlock();
         return hasKey;
     }
+
+    /**
+     * get server by address and port
+     * @param addr
+     * @param port
+     * @return
+     */
+    public ServerRecord getServerByAddress(InetAddress addr, int port){
+        Integer hashcode = new VNode(new ServerRecord(addr, port), 0).getHash();
+        lock.readLock().lock();
+        if(ring.isEmpty())
+        {
+            lock.readLock().unlock();
+            throw new NoServersException();
+        }
+
+        Map.Entry<Integer, VNode> server = ring.ceilingEntry(hashcode);
+        /* Deal with case where the successor of the key is past "0" */
+        server = (server == null) ? ring.firstEntry(): server;
+
+        lock.readLock().unlock();
+
+        return server.getValue().getServerRecordClone();
+    }
+
+    /**
+     * Get number of servers in the ring
+     * @return number of servers
+     */
+    public int getServerCount() {
+        return this.serverCount;
+    }
+
+
 
     public static class NoServersException extends IllegalStateException {}
     class ServerDoesNotExistException extends Exception {};

@@ -2,6 +2,7 @@ package com.g7.CPEN431.A7;
 
 import com.g7.CPEN431.A7.cache.RequestCacheKey;
 import com.g7.CPEN431.A7.cache.RequestCacheValue;
+import com.g7.CPEN431.A7.cache.ResponseType;
 import com.g7.CPEN431.A7.consistentMap.ConsistentMap;
 import com.g7.CPEN431.A7.consistentMap.ServerRecord;
 import com.g7.CPEN431.A7.map.KeyWrapper;
@@ -9,10 +10,7 @@ import com.g7.CPEN431.A7.map.ValueWrapper;
 import com.g7.CPEN431.A7.newProto.KVMsg.KVMsg;
 import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgFactory;
 import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgSerializer;
-import com.g7.CPEN431.A7.newProto.KVRequest.KVRequest;
-import com.g7.CPEN431.A7.newProto.KVRequest.KVRequestFactory;
-import com.g7.CPEN431.A7.newProto.KVRequest.KVRequestSerializer;
-import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
+import com.g7.CPEN431.A7.newProto.KVRequest.*;
 import com.g7.CPEN431.A7.wrappers.PB_ContentType;
 import com.g7.CPEN431.A7.wrappers.PublicBuffer;
 import com.g7.CPEN431.A7.wrappers.UnwrappedMessage;
@@ -36,6 +34,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import static com.g7.CPEN431.A7.KVServer.self;
 import static com.g7.CPEN431.A7.KVServer.selfLoopback;
 import static com.g7.CPEN431.A7.cache.ResponseType.*;
+import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_ALI;
+import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_DED;
 
 public class KVServerTaskHandler implements Runnable {
     /* Thread parameters */
@@ -62,8 +62,8 @@ public class KVServerTaskHandler implements Runnable {
     final private ConcurrentLinkedQueue<ServerRecord>pendingRecordDeaths;
 
     /* Constants */
-    final static int KEY_MAX_LEN = 32;
-    final static int VALUE_MAX_LEN = 10_000;
+    public final static int KEY_MAX_LEN = 32;
+    public final static int VALUE_MAX_LEN = 10_000;
     public final static int CACHE_OVL_WAIT_TIME = 80;   // Temporarily unused since cache doesn't overflow
     public final static int THREAD_OVL_WAIT_TIME = 16;
     public final static int MAP_SZ = 60_817_408;
@@ -82,6 +82,8 @@ public class KVServerTaskHandler implements Runnable {
 
     /* Request Codes */
     public final static int REQ_CODE_PUT = 0x01;
+
+    public final static int REQ_CODE_BULKPUT = 0x200;
     public final static int REQ_CODE_GET = 0X02;
     public final static int REQ_CODE_DEL = 0X03;
     public final static int REQ_CODE_SHU = 0X04;
@@ -95,6 +97,7 @@ public class KVServerTaskHandler implements Runnable {
     public final static int STAT_CODE_OK = 0x00;
     public final static int STAT_CODE_OLD = 0x01;
     public final static int STAT_CODE_NEW = 0x02;
+
 
     public KVServerTaskHandler(DatagramPacket iPacket,
                                Cache<RequestCacheKey, DatagramPacket> requestCache,
@@ -118,7 +121,7 @@ public class KVServerTaskHandler implements Runnable {
         this.pendingRecordDeaths = pendingRecordDeaths;
     }
 
-    // TODO: empty constructor for testing
+    // empty constructor for testing DeathUpdateTest
     public KVServerTaskHandler(ConsistentMap serverRing, ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths) {
         this.iPacket = null;
         this.requestCache = null;
@@ -130,6 +133,20 @@ public class KVServerTaskHandler implements Runnable {
         this.outbound = null;
         this.serverRing = serverRing;
         this.pendingRecordDeaths = pendingRecordDeaths;
+    }
+
+    // empty constructor for testing BulkPutTest
+    public KVServerTaskHandler(ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock mapLock, AtomicInteger bytesUsed){
+        this.iPacket = null;
+        this.requestCache = null;
+        this.map = map;
+        this.mapLock = mapLock;
+        this.bytesUsed = bytesUsed;
+        this.bytePool = null;
+        this.isOverloaded = false;
+        this.outbound = null;
+        this.serverRing = null;
+        this.pendingRecordDeaths = null;
     }
 
 
@@ -146,6 +163,11 @@ public class KVServerTaskHandler implements Runnable {
             // Return shared objects to the pool
             bytePool.offer(iPacket.getData());
         }
+    }
+
+    // used for testing in BulkPutTest
+    public ConcurrentMap<KeyWrapper, ValueWrapper> getMap(){
+        return this.map;
     }
 
     /**
@@ -290,6 +312,7 @@ public class KVServerTaskHandler implements Runnable {
             case REQ_CODE_PID: res = handleGetPID(scaf, payload); break;
             case REQ_CODE_MEM: res = handleGetMembershipCount(scaf, payload);  break;
             case REQ_CODE_DED: res = handleDeathUpdate(scaf, payload); break;
+            case REQ_CODE_BULKPUT: res = handleBulkPut(scaf, payload); break;
 
             default: {
                 RequestCacheValue val = scaf.setResponseType(INVALID_OPCODE).build();
@@ -389,7 +412,7 @@ public class KVServerTaskHandler implements Runnable {
 
         RequestCacheValue res = scaf
                 .setResponseType(MEMBERSHIP_COUNT)
-                .setMembershipCount(1)
+                .setMembershipCount(serverRing.getServerCount())
                 .build();
 
         return generateAndSend(res);
@@ -512,6 +535,72 @@ public class KVServerTaskHandler implements Runnable {
     }
 
     /**
+     * Handle a bulk put operation, response contains a server status code list which indicates the status of each individual put
+     * @param scaf Scaffold builder for Request CacheValue that is partially filled in (with IP / port etc.)
+     * @param payload Payload from the client
+     * @return The packet sent
+     */
+    private DatagramPacket handleBulkPut (RequestCacheValue.Builder scaf, UnwrappedPayload payload) {
+        List<PutPair> pairs = payload.getPutPair();
+        List<Integer> serverStatusCodes = bulkPutHelper(pairs);
+
+        RequestCacheValue res = scaf.setServerStatusCodes(serverStatusCodes).build();
+        AtomicReference<DatagramPacket> pkt = new AtomicReference<>();
+        pkt.set(generateAndSend(res));
+
+        return pkt.get();
+    }
+
+    public List<Integer> bulkPutHelper(List<PutPair> pairs){
+        assert map != null;
+        assert mapLock != null;
+        assert bytesUsed != null;
+
+        List<Integer> serverStatusCodes = new ArrayList<>();
+        for (PutPair pair: pairs) {
+            if(!pair.hasKey() || !pair.hasValue())
+            {
+                serverStatusCodes.add(RES_CODE_INVALID_OPTIONAL);
+                continue;
+            }
+
+            //defensive design to reject 0 length keys
+            if(pair.getKey().length == 0 || pair.getKey().length > KEY_MAX_LEN)
+            {
+                serverStatusCodes.add(RES_CODE_INVALID_KEY);
+                continue;
+            }
+
+            if(pair.getValue().length > VALUE_MAX_LEN)
+            {
+                serverStatusCodes.add(RES_CODE_INVALID_VALUE);
+                continue;
+            }
+
+            if(bytesUsed.get() >= MAP_SZ) {
+                serverStatusCodes.add(RES_CODE_NO_MEM);
+                // unsafe, copied from handlePut
+                mapLock.writeLock().lock();
+                map.clear();
+                bytesUsed.set(0);
+                mapLock.writeLock().unlock();
+                continue;
+            }
+
+            mapLock.readLock().lock();
+
+            map.compute(new KeyWrapper(pair.getKey()), (key, value) -> {
+                serverStatusCodes.add(RES_CODE_SUCCESS);
+                bytesUsed.addAndGet(pair.getValue().length);
+                return new ValueWrapper(pair.getValue(), 0);
+            });
+
+            mapLock.readLock().unlock();
+        }
+        return serverStatusCodes;
+    }
+
+    /**
      * Helper function that responds to get requests
      * @param scaf Scaffold builder for Request CacheValue that is partially filled in (with IP / port etc.)
      * @param payload Payload from the client
@@ -628,7 +717,7 @@ public class KVServerTaskHandler implements Runnable {
     {
         /* retrieve the list of obituaries that the sender knows */
         List<ServerEntry> deadServers = payload.getServerRecord();
-        List<Integer> serverStatusCodes = getDeathCodes(deadServers);
+        List<Integer> serverStatusCodes = getDeathCodes(deadServers, self);
 
         DatagramPacket pkt = null;
         ValueWrapper value = null;
@@ -640,32 +729,52 @@ public class KVServerTaskHandler implements Runnable {
     }
 
     // TODO: needs to be changed back to private after testing
-    public List<Integer> getDeathCodes(List<ServerEntry> deadServers) {
+    public List<Integer> getDeathCodes(List<ServerEntry> deadServers, ServerRecord us) {
         List<Integer> serverStatusCodes = new ArrayList<>();
-
+        assert pendingRecordDeaths != null;
         for (ServerEntry server: deadServers) {
-            try {
-                /* retrieve server address and port */
-                InetAddress addr = InetAddress.getByAddress(server.getServerAddress());
-                int port = server.getServerPort();
+            //verify that the server in the death update is not us
+            if (!us.equals(server)) {
+                try {
+                    /* retrieve server address and port */
+                    InetAddress addr = InetAddress.getByAddress(server.getServerAddress());
+                    int port = server.getServerPort();
 
-                /* remove the server from the ring and add to the pending queue if the server is in the ring (receiving news) */
-                /* TODO: This is not correct, you must also check the time of the record and only if the time is later,
-                then you will remove.
-                 */
-                if(serverRing.hasServer(addr, port)) {
-                    serverRing.removeServer(addr, port);
+                    if (server.getCode() == CODE_ALI) {
+                        if (!serverRing.hasServer(addr, port)) {
+                            server.setInformationTime(System.currentTimeMillis());
+                            serverRing.addServer(addr, port);
+                            pendingRecordDeaths.add((ServerRecord) server);
+                            serverStatusCodes.add(STAT_CODE_NEW);
+                        } else {
+                            serverStatusCodes.add(STAT_CODE_OLD);
+                        }
+                    } else {
 
-                    // this might not work
-                    pendingRecordDeaths.add((ServerRecord) server);
+                        /* remove the server from the ring and add to the pending queue if the server is in the ring (receiving news) and if
+                         * the server record on the ring has been added before the death update */
+                        if (serverRing.hasServer(addr, port) && serverRing.getServerByAddress(addr, port).getInformationTime() < server.getInformationTime()) {
+
+                            serverRing.removeServer(addr, port);
+                            pendingRecordDeaths.add((ServerRecord) server);
+                            serverStatusCodes.add(STAT_CODE_NEW);
+
+                        } else {
+                            /* tell the sender that the information transferred is old news (server not in the ring already) */
+                            serverStatusCodes.add(STAT_CODE_OLD);
+                        }
+                    }
+                } catch(UnknownHostException uhe){
+                    System.err.println("Unknown Host, cannot remove server: " + uhe.getMessage());
+                }
+            } else {
+                if (server.getCode() == CODE_DED) {
+                    us.setCode(CODE_ALI);
+                    pendingRecordDeaths.add(us);
                     serverStatusCodes.add(STAT_CODE_NEW);
-
-                } else{
-                    /* tell the sender that the information transferred is old news (server not in the ring already) */
+                } else {
                     serverStatusCodes.add(STAT_CODE_OLD);
                 }
-            } catch(UnknownHostException uhe){
-                System.err.println("Unknown Host, cannot remove server: " + uhe.getMessage());
             }
         }
 
