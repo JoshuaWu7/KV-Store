@@ -20,6 +20,7 @@ import com.google.common.cache.Cache;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -816,36 +817,16 @@ public class KVServerTaskHandler implements Runnable {
 
         if (pairs.size() > 0) {
             try {
-                KVClient sender = new KVClient(address, 0, new DatagramSocket(), new byte[16384]);
+                DatagramSocket socket = new DatagramSocket();
+                KVClient sender = new KVClient(address, 0, socket, new byte[16384]);
                 sender.bulkPut(pairs);
+                socket.close();
             } catch (Exception e){
                 System.out.println("Error sending bulk put to transfer keys");
                 e.printStackTrace();
             }
         }
     }
-
-    /**
-     * Sends all keys to new node if current server is successor
-     * @param scaf: response object builder
-     * @param payload: the payload from the request
-     * @return the return packet sent back to the sender
-     */
-    private DatagramPacket handleServerJoin(RequestCacheValue.Builder scaf, UnwrappedPayload payload)
-    {
-        /* retrieve the list of obituaries that the sender knows */
-        List<ServerEntry> deadServers = payload.getServerRecord();
-        List<Integer> serverStatusCodes = getDeathCodes(deadServers, self);
-
-        DatagramPacket pkt = null;
-        ValueWrapper value = null;
-
-        /* create response packet for receiving news */
-        RequestCacheValue response = scaf.setResponseType(OBITUARIES).setServerStatusCodes(serverStatusCodes).build();
-        pkt = generateAndSend(response);
-        return pkt;
-    }
-
 
     // Custom Exceptions
 
