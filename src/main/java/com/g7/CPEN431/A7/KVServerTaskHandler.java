@@ -3,6 +3,7 @@ package com.g7.CPEN431.A7;
 import com.g7.CPEN431.A7.cache.RequestCacheKey;
 import com.g7.CPEN431.A7.cache.RequestCacheValue;
 import com.g7.CPEN431.A7.cache.ResponseType;
+import com.g7.CPEN431.A7.client.KVClient;
 import com.g7.CPEN431.A7.consistentMap.ConsistentMap;
 import com.g7.CPEN431.A7.consistentMap.ServerRecord;
 import com.g7.CPEN431.A7.map.KeyWrapper;
@@ -19,6 +20,7 @@ import com.google.common.cache.Cache;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -745,7 +747,11 @@ public class KVServerTaskHandler implements Runnable {
                         boolean updated = serverRing.updateServerRecord((ServerRecord) server);
                         serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
 
-                        if(updated) pendingRecordDeaths.add((ServerRecord) server);
+                        if(updated)
+                        {
+                            pendingRecordDeaths.add((ServerRecord) server);
+                            transferKeys((ServerRecord) server);
+                        }
                         //todo: call vanessa's fxn here to bulk transfer
 
                     }
@@ -780,6 +786,53 @@ public class KVServerTaskHandler implements Runnable {
         return serverStatusCodes;
     }
 
+    /**
+     * Finds keys for which current server is successor and transfers them to the new server
+     * @param r - the server to which keys will be transferred to.
+     */
+
+    private void transferKeys(ServerRecord r) {
+        InetAddress address = r.getAddress();
+        int port = r.getPort();
+        List<PutPair> pairs = new ArrayList<>();
+
+        mapLock.readLock().unlock();
+
+        this.map.forEach((keyWrapper, valueWrapper) -> {
+            byte[] key = keyWrapper.getKey();
+            byte[] value = valueWrapper.getValue();
+
+            try {
+                ServerRecord destination = serverRing.getServer(key);
+
+                //New server is taking over this node
+                if (!self.equals(destination)) {
+                    PutPair pair = new KVPair();
+                    pair.setKey(key);
+                    pair.setValue(value);
+                    pairs.add(pair);
+                }
+            } catch (NoSuchAlgorithmException e) {
+                System.err.println("Could not generate hash");
+                System.err.println("Doing nothing");
+                return;
+            }
+        });
+
+        mapLock.readLock().unlock();
+
+        if (pairs.size() > 0) {
+            try {
+                DatagramSocket socket = new DatagramSocket();
+                KVClient sender = new KVClient(address, 0, socket, new byte[16384]);
+                sender.bulkPut(pairs);
+                socket.close();
+            } catch (Exception e){
+                System.out.println("Error sending bulk put to transfer keys");
+                e.printStackTrace();
+            }
+        }
+    }
 
     // Custom Exceptions
 

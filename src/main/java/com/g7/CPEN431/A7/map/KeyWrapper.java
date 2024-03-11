@@ -23,4 +23,8 @@ public class KeyWrapper implements BytesMarshallable {
     public int hashCode() {
         return Arrays.hashCode(key);
     }
+
+    public byte[] getKey() {
+        return key;
+    }
 }
