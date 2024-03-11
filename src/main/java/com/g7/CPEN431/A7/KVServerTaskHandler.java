@@ -545,12 +545,10 @@ public class KVServerTaskHandler implements Runnable {
         List<Integer> serverStatusCodes = bulkPutHelper(pairs);
 
         RequestCacheValue res = scaf.setServerStatusCodes(serverStatusCodes).build();
-        AtomicReference<DatagramPacket> pkt = new AtomicReference<>();
-        pkt.set(generateAndSend(res));
-
-        return pkt.get();
+        return generateAndSend(res);
     }
 
+    //TODO fix later
     public List<Integer> bulkPutHelper(List<PutPair> pairs){
         assert map != null;
         assert mapLock != null;
@@ -741,39 +739,37 @@ public class KVServerTaskHandler implements Runnable {
                     int port = server.getServerPort();
 
                     if (server.getCode() == CODE_ALI) {
-                        if (!serverRing.hasServer(addr, port)) {
-                            server.setInformationTime(System.currentTimeMillis());
-                            serverRing.addServer(addr, port);
-                            pendingRecordDeaths.add((ServerRecord) server);
-                            serverStatusCodes.add(STAT_CODE_NEW);
-                        } else {
-                            serverStatusCodes.add(STAT_CODE_OLD);
-                        }
-                    } else {
+                        boolean updated = serverRing.updateServerRecord((ServerRecord) server);
+                        serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
+
+                        if(updated) pendingRecordDeaths.add((ServerRecord) server);
+                        //todo: call vanessa's fxn here to bulk transfer
+
+                    }
+                    /* it is dead */
+                    else {
 
                         /* remove the server from the ring and add to the pending queue if the server is in the ring (receiving news) and if
                          * the server record on the ring has been added before the death update */
-                        if (serverRing.hasServer(addr, port) && serverRing.getServerByAddress(addr, port).getInformationTime() < server.getInformationTime()) {
+                        boolean updated = serverRing.removeServersAtomic((ServerRecord) server);
+                        serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
 
-                            serverRing.removeServer(addr, port);
-                            pendingRecordDeaths.add((ServerRecord) server);
-                            serverStatusCodes.add(STAT_CODE_NEW);
+                        if(updated) pendingRecordDeaths.add((ServerRecord) server);
 
-                        } else {
-                            /* tell the sender that the information transferred is old news (server not in the ring already) */
-                            serverStatusCodes.add(STAT_CODE_OLD);
-                        }
                     }
                 } catch(UnknownHostException uhe){
                     System.err.println("Unknown Host, cannot remove server: " + uhe.getMessage());
                 }
-            } else {
+            }
+            //the server update is about us
+            else {
                 if (server.getCode() == CODE_DED) {
-                    us.setCode(CODE_ALI);
+                    us.setLastSeenNow();
                     pendingRecordDeaths.add(us);
-                    serverStatusCodes.add(STAT_CODE_NEW);
-                } else {
                     serverStatusCodes.add(STAT_CODE_OLD);
+                } else {
+                    //continue propagating the message
+                    serverStatusCodes.add(STAT_CODE_NEW);
                 }
             }
         }

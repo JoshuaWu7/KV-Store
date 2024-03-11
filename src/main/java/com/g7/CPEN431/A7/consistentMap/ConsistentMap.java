@@ -309,6 +309,15 @@ public class ConsistentMap {
         return hasKey;
     }
 
+    public boolean hasServer(ServerRecord r)
+    {
+        int hashcode = new VNode(r, 0).getHash();
+        lock.readLock().lock();
+        boolean hasKey = ring.containsKey(hashcode);
+        lock.readLock().unlock();
+        return hasKey;
+    }
+
     /**
      * get server by address and port
      * @param addr
@@ -331,6 +340,88 @@ public class ConsistentMap {
         lock.readLock().unlock();
 
         return server.getValue().getServerRecordClone();
+    }
+
+    /**
+     * Updates the server record to the latest one of the current server record
+     * in the ring, and incomingRecord.
+     * @param incomingRecord - incoming incomingRecord that will be considered for update.
+     * @return true if incomingRecord was updated, false if not updated.
+     */
+    public boolean updateServerRecord(ServerRecord incomingRecord)
+    {
+        ServerRecord realCopy = new ServerRecord(incomingRecord);
+
+        lock.writeLock().lock();
+        if(ring.isEmpty())
+        {
+            lock.writeLock().unlock();
+            throw new NoServersException();
+        }
+
+        /* Compare the times of the server incomingRecord */
+        int hashcode = new VNode(realCopy, 0).getHash();
+
+        /* Check if it exists */
+        VNode existingVnode = ring.get(hashcode);
+
+        /* If it does not exist, or is older, overwrite */
+        if(existingVnode == null ||
+            incomingRecord.getInformationTime() > existingVnode.serverRecord.getInformationTime())
+        {
+            for(int i = 0; i < VNodes; i++)
+            {
+                int key = new VNode(realCopy, i).getHash();
+                ring.get(key).serverRecord = realCopy;
+            }
+
+            lock.writeLock().unlock();
+            return true;
+        }
+        /* If the incoming incomingRecord is newer, do nothing */
+        else
+        {
+            lock.writeLock().unlock();
+            return false;
+        }
+    }
+
+    /**
+     * Removes the server represented by incomingRecord if it exists, and
+     * the incomingRecord's later than the server record in the ring.
+     * @param incomingRecord
+     * @return true if the ring was updated, false otherwise.
+     */
+    public boolean removeServersAtomic(ServerRecord incomingRecord)
+    {
+        ServerRecord realCopy = new ServerRecord(incomingRecord);
+
+        lock.writeLock().lock();
+        if(ring.isEmpty())
+        {
+            lock.writeLock().unlock();
+            throw new NoServersException();
+        }
+
+        /* Compare the times of the server incomingRecord */
+        int hashcode = new VNode(realCopy, 0).getHash();
+
+        /* Check if it exists */
+        VNode existingVnode = ring.get(hashcode);
+
+        /* If it does not exist, or is older, exit*/
+        if(existingVnode == null || existingVnode.serverRecord.getInformationTime() < incomingRecord.getInformationTime())
+        {
+            lock.writeLock().unlock();
+            return false;
+        }
+        /* If it exists and the information is newer, remove */
+        else
+        {
+            removeServer(incomingRecord);
+            lock.writeLock().unlock();
+            return true;
+        }
     }
 
     /**
