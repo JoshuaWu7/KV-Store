@@ -11,6 +11,8 @@ import java.net.DatagramSocket;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.g7.CPEN431.A7.KVServer.*;
 import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_DED;
@@ -21,9 +23,10 @@ public class DeathRegistrar extends TimerTask {
     ConsistentMap ring;
     KVClient sender;
     Random random;
+    Timer scheduler;
 
     long previousPingSendTime;
-    final static int SUSPENDED_THRESHOLD = 300;
+    final static int SUSPENDED_THRESHOLD = 1000;
     final static int K = 6;
 
     public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring)
@@ -33,12 +36,13 @@ public class DeathRegistrar extends TimerTask {
         this.ring = ring;
         this.sender = new KVClient(null, 0, new DatagramSocket(), new byte[16384]);
         this.random = new Random();
-        this.previousPingSendTime = -1;
+        this.previousPingSendTime = Instant.now().toEpochMilli();
     }
 
     @Override
-    public void run() {
+    public synchronized void run() {
         updateBroadcastQueue();
+        //check self suspended clears the queue, since anything in there is probably outdated.
         checkSelfSuspended();
         checkIsAlive();
         gossip();
@@ -75,12 +79,17 @@ public class DeathRegistrar extends TimerTask {
             return;
         }
 
+        if(broadcastQueue.containsKey(self))
+        {
+            System.out.println("broadcasting self to: " + target.getPort());
+        }
+
         if(!target.hasServerAddress() || !target.hasServerPort())
         {
             throw new IllegalStateException();
         }
 
-        if(broadcastQueue.isEmpty())
+        if(broadcastQueue.isEmpty() || target.equals(self) || target.equals(selfLoopback))
         {
             return;
         }
@@ -93,7 +102,7 @@ public class DeathRegistrar extends TimerTask {
         } catch (KVClient.ServerTimedOutException e)
         {
             System.out.println("Server declared dead by gossip response");
-            System.out.println("Port: " + target.getPort());
+            System.out.println("Port: " + target.getAddress().toString() + ":" +target.getPort());
             ring.setServerDeadNow(target);
             ring.removeServer(target);
             broadcastQueue.put(target, target);
@@ -131,7 +140,6 @@ public class DeathRegistrar extends TimerTask {
             {
                 //delete the response
                 broadcastQueue.remove( (ServerRecord) l.get(i));
-                //TODO additional logic to store old "news" that is recirculating. probably let vanessa do this.
             }
         }
 
@@ -147,16 +155,19 @@ public class DeathRegistrar extends TimerTask {
     private void checkIsAlive() {
         ServerRecord target = null;
 
+
         try {
             target = ring.getNextServer();
 
+
+
             /* omit this round if next server is equal to self */
-            if(target.equals(selfLoopback) || target.equals(self))
+            if(target.equals(selfLoopback) || target.equals(self) ||
+                   Instant.now().toEpochMilli() - target.getInformationTime() < 2000)
             {
                 return;
             }
 
-            previousPingSendTime = Instant.now().toEpochMilli();
 
             sender.setDestination(target.getAddress(), target.getServerPort());
             sender.isAlive();
@@ -182,16 +193,17 @@ public class DeathRegistrar extends TimerTask {
      * This function does nothing if the current server has not yet sent a ping before.
      */
     private void checkSelfSuspended() {
-        if (previousPingSendTime > 0) {
-            long currentTime = Instant.now().toEpochMilli();
+        long currentTime = Instant.now().toEpochMilli();
+        broadcastQueue.clear();
+        if (currentTime - previousPingSendTime > GOSSIP_INTERVAL + SUSPENDED_THRESHOLD) {
+            // TODO: check for self loopback
+            self.setLastSeenNow();
+            ring.setServerAlive(self);
 
-            if (previousPingSendTime - currentTime > GOSSIP_INTERVAL + SUSPENDED_THRESHOLD) {
-                // TODO: check for self loopback
-                self.setLastSeenNow();
-                ring.setServerAlive(self);
-
-                broadcastQueue.put(self, self);
-            }
+            broadcastQueue.put(self, self);
         }
+
+        previousPingSendTime = currentTime;
+
     }
 }

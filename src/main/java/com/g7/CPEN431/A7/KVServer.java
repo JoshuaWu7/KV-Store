@@ -48,9 +48,10 @@ public class KVServer
     {
         try
         {
+            System.out.println("PID: " + ProcessHandle.current().pid());
 
            PORT = Integer.parseInt(args[0]);
-           self = new ServerRecord(InetAddress.getLocalHost(), PORT);
+           self = new ServerRecord(InetAddress.getByAddress(InetAddress.getLocalHost().getAddress()), PORT);
            selfLoopback = new ServerRecord(InetAddress.getLoopbackAddress(), PORT);
 
 
@@ -121,7 +122,7 @@ public class KVServer
 
             /* set up the timer */
             Timer timer = new Timer();
-            timer.scheduleAtFixedRate(new DeathRegistrar(pendingRecordDeaths, serverRing), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
+            timer.schedule(new DeathRegistrar(pendingRecordDeaths, serverRing), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
 
             while(true){
 

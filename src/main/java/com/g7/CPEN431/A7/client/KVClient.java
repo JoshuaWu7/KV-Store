@@ -10,6 +10,7 @@ import com.g7.CPEN431.A7.newProto.KVResponse.ServerResponseFactory;
 import com.g7.CPEN431.A7.wrappers.UnwrappedMessage;
 import com.g7.CPEN431.A7.wrappers.UnwrappedPayload;
 
+import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -27,6 +28,8 @@ public class KVClient {
     byte[] publicBuf;
     int testSequence;
     UnwrappedMessage messageOnWire;
+
+    public final static int timeout = 100;
 
     /* Test Result codes */
     public final static int TEST_FAILED = 0;
@@ -61,7 +64,11 @@ public class KVClient {
         this.socket = socket;
         this.publicBuf = publicBuf;
 
-        socket.setSoTimeout(100);
+        socket.setSoTimeout(timeout);
+    }
+
+    public KVClient(byte[] publicBuf){
+        this.publicBuf = publicBuf;
     }
 
     public KVClient(InetAddress serverAddress, int serverPort, DatagramSocket socket, byte[] publicBuf, int testSequence) {
@@ -74,6 +81,19 @@ public class KVClient {
 
     public void setDestination(InetAddress serverAddress, int serverPort)
     {
+        if(this.socket != null && !this.socket.isClosed())
+        {
+            this.socket.close();
+        }
+
+        //create a new socket to clear the buffer.
+        try {
+            this.socket = new DatagramSocket();
+            this.socket.setSoTimeout(timeout);
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
+
         this.serverAddress = serverAddress;
         this.serverPort = serverPort;
     }
@@ -261,6 +281,13 @@ public class KVClient {
             MissingValuesException {
         ServerResponse res;
 
+        System.out.println(Thread.currentThread().getName());
+
+        if(this.socket == null || this.serverAddress == null || this.serverPort == 0)
+        {
+            throw new RuntimeException("Destination not set");
+        }
+
         UnwrappedMessage msg = generateMessage(pl);
         res = sendAndReceiveSingleServerResponse(msg);
 
@@ -357,6 +384,8 @@ public class KVClient {
             CRC32 crc32 = new CRC32();
             crc32.update(rIDnPL.array());
             boolean crc32Match = crc32.getValue() == res.getCheckSum();
+
+            if(!msgIDMatch) continue;
 
             success = msgIDMatch && crc32Match;
             tries++;

@@ -28,7 +28,6 @@ public class ConsistentMap {
     private final ReadWriteLock lock;
     private int current = 0;
 
-    private int serverCount;
 
     /**
      *
@@ -40,7 +39,6 @@ public class ConsistentMap {
         this.ring = new TreeMap<>();
         this.VNodes = vNodes;
         this.lock = new ReentrantReadWriteLock();
-        serverCount = 0;
 
         // Parse the txt file with all servers.
         Path path = Paths.get(serverPathName);
@@ -88,7 +86,6 @@ public class ConsistentMap {
             VNode vnode = new VNode(newServer, i);
             ring.put(vnode.getHash(), vnode);
         }
-        serverCount++;
         lock.writeLock().unlock();
 
         return newServer;
@@ -113,12 +110,14 @@ public class ConsistentMap {
     public void removeServer(ServerRecord r)
     {
         lock.writeLock().lock();
+        System.out.println("removed server " + r.getPort());
         for(int i = 0; i < VNodes; i++)
         {
             int hashcode = new VNode(r, i).getHash();
             ring.remove(hashcode);
         }
-        serverCount--;
+
+
         lock.writeLock().unlock();
     }
 
@@ -209,6 +208,8 @@ public class ConsistentMap {
         int hashcode = new VNode(r, 0).getHash();
         VNode vnode = ring.get(hashcode);
 
+        r.setLastSeenNow();
+
         if(vnode == null)
         {
             addServer(r.getAddress(), r.getPort());
@@ -231,6 +232,8 @@ public class ConsistentMap {
         int hashcode = new VNode(r, 0).getHash();
         VNode vnode = ring.get(hashcode);
 
+        r.setLastSeenDeadNow();
+
         if(vnode != null) {
             vnode.serverRecord.setLastSeenDeadNow();
         };
@@ -248,6 +251,8 @@ public class ConsistentMap {
         lock.writeLock().lock();
         int hashcode = new VNode(r, 0).getHash();
         VNode vnode = ring.get(hashcode);
+
+        r.setInformationTime(informationTime);
 
         if(vnode != null)
         {
@@ -267,6 +272,8 @@ public class ConsistentMap {
         lock.writeLock().lock();
         int hashcode = new VNode(r, 0).getHash();
         VNode vnode = ring.get(hashcode);
+
+        r.setCode(statusCode);
 
         if(vnode != null)
         {
@@ -371,14 +378,15 @@ public class ConsistentMap {
         {
             for(int i = 0; i < VNodes; i++)
             {
-                int key = new VNode(realCopy, i).getHash();
-                ring.get(key).serverRecord = realCopy;
+                VNode vnode = new VNode(realCopy, i);
+                ring.put(vnode.getHash(), vnode);
             }
 
             lock.writeLock().unlock();
+            System.out.println("Server declared alive by gossip, Port: " + realCopy.getPort());
             return true;
         }
-        /* If the incoming incomingRecord is newer, do nothing */
+        /* If the incoming incomingRecord is older, do nothing */
         else
         {
             lock.writeLock().unlock();
@@ -429,7 +437,11 @@ public class ConsistentMap {
      * @return number of servers
      */
     public int getServerCount() {
-        return this.serverCount;
+        int count;
+        lock.readLock().lock();
+        count = ring.size() / VNodes;
+        lock.readLock().unlock();
+        return count;
     }
 
 

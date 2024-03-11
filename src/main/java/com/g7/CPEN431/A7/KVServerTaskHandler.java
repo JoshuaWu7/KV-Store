@@ -22,6 +22,7 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -258,6 +259,7 @@ public class KVServerTaskHandler implements Runnable {
 
 
         /* Requests here can be handled locally */
+        System.out.println("handling msg ID + " + Arrays.toString(unwrappedMessage.getMessageID()));
         DatagramPacket reply;
         try {
             reply = requestCache.get(new RequestCacheKey(unwrappedMessage.getMessageID(), unwrappedMessage.getCheckSum()),
@@ -454,6 +456,7 @@ public class KVServerTaskHandler implements Runnable {
             return generateAndSend(res);
         }
 
+        System.out.println("received isAlive " + iPacket.getPort());
         RequestCacheValue res = scaf.setResponseType(ISALIVE).build();
         return generateAndSend(res);
     }
@@ -732,7 +735,7 @@ public class KVServerTaskHandler implements Runnable {
         assert pendingRecordDeaths != null;
         for (ServerEntry server: deadServers) {
             //verify that the server in the death update is not us
-            if (!us.equals(server)) {
+            if (!us.equals(server) && !selfLoopback.equals(server)) {
                 try {
                     /* retrieve server address and port */
                     InetAddress addr = InetAddress.getByAddress(server.getServerAddress());
