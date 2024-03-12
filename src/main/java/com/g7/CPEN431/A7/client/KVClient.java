@@ -229,6 +229,7 @@ public class KVClient {
 
     public ServerResponse bulkPut(List<PutPair> pairs) throws IOException, ServerTimedOutException, MissingValuesException, InterruptedException {
         UnwrappedPayload pl = new UnwrappedPayload();
+        assert pairs != null;
         pl.setCommand(REQ_CODE_BULKPUT);
         pl.setPutPair(pairs);
         return sendAndReceiveServerResponse(pl);
@@ -291,8 +292,6 @@ public class KVClient {
             InterruptedException,
             MissingValuesException {
         ServerResponse res;
-
-        System.out.println(Thread.currentThread().getName());
 
         if(this.socket == null || this.serverAddress == null || this.serverPort == 0)
         {

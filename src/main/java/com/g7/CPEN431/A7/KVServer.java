@@ -28,7 +28,7 @@ public class KVServer
 {
     /* Default port, overwritten by cmd line */
     static int PORT = 13788;
-    final static int N_THREADS = 4;
+    final static int N_THREADS = 5;
     static final int PACKET_MAX = 16384;
     final static long CACHE_EXPIRY = 1;
     final static int QUEUE_MAX = 8;
@@ -40,6 +40,7 @@ public class KVServer
     final static int VNODE_COUNT = 4;
     final static int GOSSIP_INTERVAL = 500;
     final static int GOSSIP_WAIT_INIT = 8000;
+    final static int BULKPUT_MAX_SZ = 12000;
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
 
@@ -58,7 +59,7 @@ public class KVServer
 
             DatagramSocket server = new DatagramSocket(PORT);
             /* Eliminated in single thread */
-//            ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
+            ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
 
             ConcurrentMap<KeyWrapper, ValueWrapper> map
                     = ChronicleMap
@@ -99,20 +100,20 @@ public class KVServer
 
             /* Outbound Queue and Thread - eliminated in single thread implementation */
             ConcurrentLinkedQueue<DatagramPacket> outbound = new ConcurrentLinkedQueue<>();
-//            executor.execute(() -> {
-//                while (true) {
-//                    if(!outbound.isEmpty()) {
-//                        try {
-//                            server.send(outbound.poll());
-//                        } catch (IOException e) {
-//                            System.err.println("Failure to send packets");
-//                            throw new RuntimeException(e);
-//                        }
-//                    } else {
-//                        Thread.yield();
-//                    }
-//                }
-//            });
+            executor.execute(() -> {
+                while (true) {
+                    if(!outbound.isEmpty()) {
+                        try {
+                            server.send(outbound.poll());
+                        } catch (IOException e) {
+                            System.err.println("Failure to send packets");
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        Thread.yield();
+                    }
+                }
+            });
 
             /* Set up the list of servers */
             ConsistentMap serverRing = new ConsistentMap(VNODE_COUNT, SERVER_LIST);
@@ -137,7 +138,7 @@ public class KVServer
                 server.receive(iPacket);
 
                 /* Run it directly instead of via executor service. */
-                new KVServerTaskHandler(
+                executor.execute(new KVServerTaskHandler(
                         iPacket,
                         requestCache,
                         map,
@@ -147,13 +148,13 @@ public class KVServer
                         isOverloaded,
                         outbound,
                         serverRing,
-                        pendingRecordDeaths).run();
+                        pendingRecordDeaths));
 
                 /* Executed here in single thread impl. */
-                while(!outbound.isEmpty())
-                {
-                    server.send(outbound.poll());
-                }
+//                while(!outbound.isEmpty())
+//                {
+//                    server.send(outbound.poll());
+//                }
             }
 
         } catch (SocketException e) {

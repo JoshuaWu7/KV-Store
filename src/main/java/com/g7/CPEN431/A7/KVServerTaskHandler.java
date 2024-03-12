@@ -4,6 +4,7 @@ import com.g7.CPEN431.A7.cache.RequestCacheKey;
 import com.g7.CPEN431.A7.cache.RequestCacheValue;
 import com.g7.CPEN431.A7.cache.ResponseType;
 import com.g7.CPEN431.A7.client.KVClient;
+import com.g7.CPEN431.A7.client.ServerResponse;
 import com.g7.CPEN431.A7.consistentMap.ConsistentMap;
 import com.g7.CPEN431.A7.consistentMap.ForwardList;
 import com.g7.CPEN431.A7.consistentMap.ServerRecord;
@@ -24,6 +25,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -256,7 +258,6 @@ public class KVServerTaskHandler implements Runnable {
 
 
         /* Requests here can be handled locally */
-        System.out.println("handling msg ID + " + Arrays.toString(unwrappedMessage.getMessageID()));
         DatagramPacket reply;
         try {
             reply = requestCache.get(new RequestCacheKey(unwrappedMessage.getMessageID(), unwrappedMessage.getCheckSum()),
@@ -540,8 +541,15 @@ public class KVServerTaskHandler implements Runnable {
      * @return The packet sent
      */
     private DatagramPacket handleBulkPut (RequestCacheValue.Builder scaf, UnwrappedPayload payload) {
-        payload.getPutPair();
+        if(!payload.hasPutPair())
+        {
+            RequestCacheValue res = scaf.setResponseType(INVALID_OPTIONAL).build();
+            return generateAndSend(res);
+        }
 
+
+
+        bulkPutHelper(payload.getPutPair());
         RequestCacheValue res = scaf.setResponseType(ISALIVE).build();
         return generateAndSend(res);
     }
@@ -551,6 +559,7 @@ public class KVServerTaskHandler implements Runnable {
         assert map != null;
         assert mapLock != null;
         assert bytesUsed != null;
+
 
         for (PutPair pair: pairs) {
             if(!pair.hasKey() || !pair.hasValue())
@@ -576,6 +585,7 @@ public class KVServerTaskHandler implements Runnable {
             mapLock.readLock().lock();
 
             map.compute(new KeyWrapper(pair.getKey()), (key, value) -> {
+                System.out.println("added key" + ByteBuffer.wrap(pair.getKey()).getInt());
                 bytesUsed.addAndGet(pair.getValue().length);
                 return new ValueWrapper(pair.getValue(), pair.getVersion());
             });
@@ -793,24 +803,33 @@ public class KVServerTaskHandler implements Runnable {
                 List<PutPair> temp = new ArrayList<>();
                 int currPacketSize = 0;
                 for (PutPair pair : forwardList.getKeyEntries()) {
-                    byte[] pair_bytes = PutPairSerializer.serialize(pair);
-                    if (pair_bytes.length + currPacketSize > 16384) {
-                        sender.bulkPut(temp);
+                    //take an "engineering" approximation, because serialization is expensive
+                    int pairLen = pair.getKey().length + pair.getValue().length + Integer.BYTES;
+
+                    //clear the outgoing buffer and send the packet
+                    if(currPacketSize + pairLen >= BULKPUT_MAX_SZ)
+                    {
+                        System.out.println("sending" + temp.size() + "pairs");
+                        sender.setDestination(target.getAddress(), target.getPort());
+                        ServerResponse res = sender.bulkPut(temp);
                         temp.clear();
                         currPacketSize = 0;
-                    } else {
-                        temp.add(pair);
-                        currPacketSize += pair_bytes.length;
                     }
-                }
+                    //add to the buffer.
+                    temp.add(pair);
+                    currPacketSize += pairLen;
 
-                sender.bulkPut(temp);
+                }
+                //clear the buffer.
+                System.out.println("sending" + temp.size() + "pairs");
+                if(temp.size() > 0) sender.bulkPut(temp);
             } catch (KVClient.ServerTimedOutException e) {
                 // TODO: Probably a wise idea to redirect the keys someplace else, but that is a problem for future me.
                 System.out.println("Bulk transfer timed out. Marking recipient as dead.");
                 serverRing.setServerDeadNow(target);
                 pendingRecordDeaths.add(target);
                 serverRing.removeServer(target);
+                mapLock.writeLock().unlock();
                 return;
             } catch (KVClient.MissingValuesException e) {
                 bytePool.offer(finalByteArr);
@@ -830,6 +849,7 @@ public class KVServerTaskHandler implements Runnable {
             forwardList.getKeyEntries().forEach((entry) ->
             {
                 map.remove(new KeyWrapper(entry.getKey()));
+                bytesUsed.addAndGet(-entry.getValue().length);
             });
         }));
 

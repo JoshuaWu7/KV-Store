@@ -101,11 +101,11 @@ public class DeathRegistrar extends TimerTask {
             r = sender.isDead(l);
         } catch (KVClient.ServerTimedOutException e)
         {
-            System.out.println("Server declared dead by gossip response");
-            System.out.println("Port: " + target.getAddress().toString() + ":" +target.getPort());
-            ring.setServerDeadNow(target);
-            ring.removeServer(target);
-            broadcastQueue.put(target, target);
+//            System.out.println("Server declared dead by gossip response");
+//            System.out.println("Port: " + target.getAddress().toString() + ":" +target.getPort());
+//            ring.setServerDeadNow(target);
+//            ring.removeServer(target);
+//            broadcastQueue.put(target, target);
             return;
         } catch (Exception e) {
             System.out.println("Spreading gossip failed");
