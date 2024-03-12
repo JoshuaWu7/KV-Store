@@ -5,6 +5,7 @@ import com.g7.CPEN431.A7.cache.RequestCacheValue;
 import com.g7.CPEN431.A7.cache.ResponseType;
 import com.g7.CPEN431.A7.client.KVClient;
 import com.g7.CPEN431.A7.consistentMap.ConsistentMap;
+import com.g7.CPEN431.A7.consistentMap.ForwardList;
 import com.g7.CPEN431.A7.consistentMap.ServerRecord;
 import com.g7.CPEN431.A7.map.KeyWrapper;
 import com.g7.CPEN431.A7.map.ValueWrapper;
@@ -23,9 +24,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -34,8 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 
-import static com.g7.CPEN431.A7.KVServer.self;
-import static com.g7.CPEN431.A7.KVServer.selfLoopback;
+import static com.g7.CPEN431.A7.KVServer.*;
 import static com.g7.CPEN431.A7.cache.ResponseType.*;
 import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_ALI;
 import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_DED;
@@ -122,6 +120,7 @@ public class KVServerTaskHandler implements Runnable {
         this.outbound = outbound;
         this.serverRing = serverRing;
         this.pendingRecordDeaths = pendingRecordDeaths;
+
     }
 
     // empty constructor for testing DeathUpdateTest
@@ -229,10 +228,6 @@ public class KVServerTaskHandler implements Runnable {
             System.err.println("There are no servers in the server ring");
             System.err.println("Doing nothing");
             return;
-        } catch (NoSuchAlgorithmException e) {
-           System.err.println("Could not generate hash");
-           System.err.println("Doing nothing");
-           return;
         }
 
 
@@ -303,7 +298,6 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         //process the packet by request code
-        //TODO: Add the code to handle incoming death records.
         DatagramPacket res;
         switch(payload.getCommand())
         {
@@ -546,61 +540,48 @@ public class KVServerTaskHandler implements Runnable {
      * @return The packet sent
      */
     private DatagramPacket handleBulkPut (RequestCacheValue.Builder scaf, UnwrappedPayload payload) {
-        List<PutPair> pairs = payload.getPutPair();
-        List<Integer> serverStatusCodes = bulkPutHelper(pairs);
+        payload.getPutPair();
 
-        RequestCacheValue res = scaf.setServerStatusCodes(serverStatusCodes).build();
+        RequestCacheValue res = scaf.setResponseType(ISALIVE).build();
         return generateAndSend(res);
     }
 
     //TODO fix later
-    public List<Integer> bulkPutHelper(List<PutPair> pairs){
+    public void bulkPutHelper(List<PutPair> pairs){
         assert map != null;
         assert mapLock != null;
         assert bytesUsed != null;
 
-        List<Integer> serverStatusCodes = new ArrayList<>();
         for (PutPair pair: pairs) {
             if(!pair.hasKey() || !pair.hasValue())
             {
-                serverStatusCodes.add(RES_CODE_INVALID_OPTIONAL);
-                continue;
+                throw new IllegalArgumentException("Pair does not have fields");
             }
 
             //defensive design to reject 0 length keys
             if(pair.getKey().length == 0 || pair.getKey().length > KEY_MAX_LEN)
             {
-                serverStatusCodes.add(RES_CODE_INVALID_KEY);
-                continue;
+                throw new IllegalArgumentException("0 Length keys detected");
             }
 
             if(pair.getValue().length > VALUE_MAX_LEN)
             {
-                serverStatusCodes.add(RES_CODE_INVALID_VALUE);
-                continue;
+                throw new IllegalArgumentException("Length too long detected");
             }
 
             if(bytesUsed.get() >= MAP_SZ) {
-                serverStatusCodes.add(RES_CODE_NO_MEM);
-                // unsafe, copied from handlePut
-                mapLock.writeLock().lock();
-                map.clear();
-                bytesUsed.set(0);
-                mapLock.writeLock().unlock();
-                continue;
+                throw new IllegalStateException("Server should be empty on startup");
             }
 
             mapLock.readLock().lock();
 
             map.compute(new KeyWrapper(pair.getKey()), (key, value) -> {
-                serverStatusCodes.add(RES_CODE_SUCCESS);
                 bytesUsed.addAndGet(pair.getValue().length);
-                return new ValueWrapper(pair.getValue(), 0);
+                return new ValueWrapper(pair.getValue(), pair.getVersion());
             });
 
             mapLock.readLock().unlock();
         }
-        return serverStatusCodes;
     }
 
     /**
@@ -750,10 +731,7 @@ public class KVServerTaskHandler implements Runnable {
                         if(updated)
                         {
                             pendingRecordDeaths.add((ServerRecord) server);
-                            transferKeys((ServerRecord) server);
                         }
-                        //todo: call vanessa's fxn here to bulk transfer
-
                     }
                     /* it is dead */
                     else {
@@ -783,55 +761,66 @@ public class KVServerTaskHandler implements Runnable {
             }
         }
 
+        /* Key transfer after ring state is up-to-date */
+        transferKeys();
+
         return serverStatusCodes;
     }
 
     /**
      * Finds keys for which current server is successor and transfers them to the new server
-     * @param r - the server to which keys will be transferred to.
+     * Should be executed after the map state is updated.
      */
 
-    private void transferKeys(ServerRecord r) {
-        InetAddress address = r.getAddress();
-        int port = r.getPort();
-        List<PutPair> pairs = new ArrayList<>();
+    private void transferKeys() {
 
-        mapLock.readLock().unlock();
+        mapLock.writeLock().lock();
 
-        this.map.forEach((keyWrapper, valueWrapper) -> {
-            byte[] key = keyWrapper.getKey();
-            byte[] value = valueWrapper.getValue();
+        Collection<ForwardList> toBeForwarded = serverRing.getEntriesToBeForwarded(this.map.entrySet());
 
+        byte[] byteArr;
+        while((byteArr = bytePool.poll()) == null) Thread.yield();
+
+        KVClient sender = new KVClient(byteArr);
+
+        //TODO check size.
+        byte[] finalByteArr = byteArr;
+        toBeForwarded.forEach((forwardList -> {
+            ServerRecord target = forwardList.getDestination();
+            sender.setDestination(target.getAddress(), target.getPort());
             try {
-                ServerRecord destination = serverRing.getServer(key);
-
-                //New server is taking over this node
-                if (!self.equals(destination)) {
-                    PutPair pair = new KVPair();
-                    pair.setKey(key);
-                    pair.setValue(value);
-                    pairs.add(pair);
-                }
-            } catch (NoSuchAlgorithmException e) {
-                System.err.println("Could not generate hash");
-                System.err.println("Doing nothing");
+                System.out.println("transferring out " + forwardList.getKeyEntries().size() + "keys");
+                sender.bulkPut(new ArrayList<>(forwardList.getKeyEntries()));
+            } catch (KVClient.ServerTimedOutException e) {
+                // TODO: Probably a wise idea to redirect the keys someplace else, but that is a problem for future me.
+                System.out.println("Bulk transfer timed out. Marking recipient as dead.");
+                serverRing.setServerDeadNow(target);
+                pendingRecordDeaths.add(target);
+                serverRing.removeServer(target);
                 return;
+            } catch (KVClient.MissingValuesException e) {
+                bytePool.offer(finalByteArr);
+                mapLock.writeLock().unlock();
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                bytePool.offer(finalByteArr);
+                mapLock.writeLock().unlock();
+                throw new RuntimeException(e);
+            } catch (IOException e) {
+                    bytePool.offer(finalByteArr);
+                    mapLock.writeLock().unlock();
+                    throw new RuntimeException(e);
             }
-        });
 
-        mapLock.readLock().unlock();
+            /* remove entries in our own server */
+            forwardList.getKeyEntries().forEach((entry) ->
+            {
+                map.remove(new KeyWrapper(entry.getKey()));
+            });
+        }));
 
-        if (pairs.size() > 0) {
-            try {
-                DatagramSocket socket = new DatagramSocket();
-                KVClient sender = new KVClient(address, 0, socket, new byte[16384]);
-                sender.bulkPut(pairs);
-                socket.close();
-            } catch (Exception e){
-                System.out.println("Error sending bulk put to transfer keys");
-                e.printStackTrace();
-            }
-        }
+        mapLock.writeLock().unlock();
+        bytePool.offer(finalByteArr);
     }
 
     // Custom Exceptions

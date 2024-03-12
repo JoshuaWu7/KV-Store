@@ -93,7 +93,7 @@ public class KVServer
             /* Setup pool of byte arrays - single thread implementation only has 1 */
             /* A simpler approach to keeping track of byte arrays*/
             ConcurrentLinkedQueue<byte[]> bytePool = new ConcurrentLinkedQueue<>();
-            for(int i = 0; i < N_THREADS; i++) {
+            for(int i = 0; i < 2 * N_THREADS; i++) {
                 bytePool.add(new byte[PACKET_MAX]);
             }
 
@@ -130,8 +130,8 @@ public class KVServer
                 long remainingMemory  = r.maxMemory() - (r.totalMemory() - r.freeMemory());
                 boolean isOverloaded = remainingMemory < MEMORY_SAFETY;
 
-                while(bytePool.isEmpty()) Thread.yield();
-                byte [] iBuf = bytePool.poll();
+                byte[] iBuf;
+                while((iBuf = bytePool.poll()) == null) Thread.yield();
 
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
                 server.receive(iPacket);

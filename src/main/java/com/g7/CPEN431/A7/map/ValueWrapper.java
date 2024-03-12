@@ -7,7 +7,6 @@ import java.util.Arrays;
 public class ValueWrapper implements BytesMarshallable {
 
 
-    /* TODO Warning, do not mutate*/
     private final byte[] value;
     private final int version;
 

@@ -1,5 +1,8 @@
 package com.g7.CPEN431.A7.consistentMap;
 
+import com.g7.CPEN431.A7.map.KeyWrapper;
+import com.g7.CPEN431.A7.map.ValueWrapper;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -9,10 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -125,10 +125,8 @@ public class ConsistentMap {
      *
      * @param key - byte array containing the key of the KV pair that will need to be mapped to a server
      * @return A copy of the server
-     * @throws NoServersException If there are no servers in the ring
-     * @throws NoSuchAlgorithmException If MD5 hashing fails
      */
-    public ServerRecord getServer(byte[] key) throws NoServersException, NoSuchAlgorithmException {
+    public ServerRecord getServer(byte[] key) {
         lock.readLock().lock();
         if(ring.isEmpty())
         {
@@ -152,7 +150,7 @@ public class ConsistentMap {
      * @return A random server in the ring.
      * @throws NoServersException - If there are no servers
      */
-    public ServerRecord getRandomServer() throws NoServersException
+    public ServerRecord getRandomServer()
     {
         lock.readLock().lock();
         if(ring.isEmpty())
@@ -290,8 +288,13 @@ public class ConsistentMap {
      * @return An integer hash
      * @throws NoSuchAlgorithmException
      */
-    private int getHash(byte[] key) throws NoSuchAlgorithmException {
-        MessageDigest md5 = MessageDigest.getInstance("MD5");
+    private int getHash(byte[] key) {
+        MessageDigest md5;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
         byte[] dig = md5.digest(key);
 
         return (
@@ -442,6 +445,49 @@ public class ConsistentMap {
         count = ring.size() / VNodes;
         lock.readLock().unlock();
         return count;
+    }
+
+
+    public Collection<ForwardList> getEntriesToBeForwarded(Set<Map.Entry<KeyWrapper, ValueWrapper>> entries)
+    {
+        lock.readLock().lock();
+        if(ring.isEmpty())
+        {
+            lock.readLock().unlock();
+            throw new NoServersException();
+        }
+
+        Map<ServerRecord, ForwardList> m = new HashMap<>();
+
+        entries.forEach((entry) ->
+        {
+            /* normally it is not ok to call our own functions because of the risk of deadlock, but the getServer
+            function only uses the readlock, so it is fine.
+             */
+
+            int hashcode = getHash(entry.getKey().getKey());
+
+            Map.Entry<Integer, VNode> server = ring.ceilingEntry(hashcode);
+            /* Deal with case where the successor of the key is past "0" */
+            server = (server == null) ? ring.firstEntry(): server;
+
+            /* Do not forward keys that belong to myself */
+            if(server.getValue().serverRecord.equals(self) || server.getValue().serverRecord.equals(selfLoopback)) return;
+
+            ServerRecord cloneRecord = server.getValue().getServerRecordClone();
+            m.compute(server.getValue().serverRecord, (key, value) ->
+            {
+                ForwardList forwardList;
+                if(value == null) forwardList = new ForwardList(cloneRecord);
+                else forwardList = value;
+
+                forwardList.addToList(entry);
+
+                return forwardList;
+            });
+        });
+        lock.readLock().unlock();
+        return m.values();
     }
 
 
