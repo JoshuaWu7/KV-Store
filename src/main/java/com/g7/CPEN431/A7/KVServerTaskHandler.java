@@ -790,7 +790,21 @@ public class KVServerTaskHandler implements Runnable {
             sender.setDestination(target.getAddress(), target.getPort());
             try {
                 System.out.println("transferring out " + forwardList.getKeyEntries().size() + "keys");
-                sender.bulkPut(new ArrayList<>(forwardList.getKeyEntries()));
+                List<PutPair> temp = new ArrayList<>();
+                int currPacketSize = 0;
+                for (PutPair pair : forwardList.getKeyEntries()) {
+                    byte[] pair_bytes = PutPairSerializer.serialize(pair);
+                    if (pair_bytes.length + currPacketSize > 16384) {
+                        sender.bulkPut(temp);
+                        temp.clear();
+                        currPacketSize = 0;
+                    } else {
+                        temp.add(pair);
+                        currPacketSize += pair_bytes.length;
+                    }
+                }
+
+                sender.bulkPut(temp);
             } catch (KVClient.ServerTimedOutException e) {
                 // TODO: Probably a wise idea to redirect the keys someplace else, but that is a problem for future me.
                 System.out.println("Bulk transfer timed out. Marking recipient as dead.");
