@@ -159,8 +159,6 @@ public class DeathRegistrar extends TimerTask {
         try {
             target = ring.getNextServer();
 
-
-
             /* omit this round if next server is equal to self */
             if(target.equals(selfLoopback) || target.equals(self) ||
                    Instant.now().toEpochMilli() - target.getInformationTime() < 2000)
@@ -168,9 +166,9 @@ public class DeathRegistrar extends TimerTask {
                 return;
             }
 
-
             sender.setDestination(target.getAddress(), target.getServerPort());
             sender.isAlive();
+            ring.setServerAlive(target);
         } catch (ConsistentMap.NoServersException | IOException | KVClient.MissingValuesException |
                  InterruptedException e) {
             throw new RuntimeException(e);
