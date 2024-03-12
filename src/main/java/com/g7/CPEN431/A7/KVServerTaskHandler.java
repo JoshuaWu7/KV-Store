@@ -585,7 +585,6 @@ public class KVServerTaskHandler implements Runnable {
             mapLock.readLock().lock();
 
             map.compute(new KeyWrapper(pair.getKey()), (key, value) -> {
-                System.out.println("added key" + ByteBuffer.wrap(pair.getKey()).getInt());
                 bytesUsed.addAndGet(pair.getValue().length);
                 return new ValueWrapper(pair.getValue(), pair.getVersion());
             });
@@ -729,33 +728,31 @@ public class KVServerTaskHandler implements Runnable {
         for (ServerEntry server: deadServers) {
             //verify that the server in the death update is not us
             if (!us.equals(server) && !selfLoopback.equals(server)) {
-                try {
-                    /* retrieve server address and port */
-                    InetAddress addr = InetAddress.getByAddress(server.getServerAddress());
-                    int port = server.getServerPort();
+                /* retrieve server address and port */
 
-                    if (server.getCode() == CODE_ALI) {
-                        boolean updated = serverRing.updateServerRecord((ServerRecord) server);
-                        serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
+                if (server.getCode() == CODE_ALI) {
+                    boolean updated = serverRing.updateServerRecord((ServerRecord) server);
+                    serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
 
-                        if(updated)
-                        {
-                            pendingRecordDeaths.add((ServerRecord) server);
-                        }
+                    if(updated)
+                    {
+                        System.out.println("declared server alive by gossip" + ((ServerRecord) server).getPort());
+                        pendingRecordDeaths.add((ServerRecord) server);
                     }
-                    /* it is dead */
-                    else {
+                }
+                /* it is dead */
+                else {
 
-                        /* remove the server from the ring and add to the pending queue if the server is in the ring (receiving news) and if
-                         * the server record on the ring has been added before the death update */
-                        boolean updated = serverRing.removeServersAtomic((ServerRecord) server);
-                        serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
+                    /* remove the server from the ring and add to the pending queue if the server is in the ring (receiving news) and if
+                     * the server record on the ring has been added before the death update */
+                    boolean updated = serverRing.removeServersAtomic((ServerRecord) server);
+                    serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
 
-                        if(updated) pendingRecordDeaths.add((ServerRecord) server);
-
+                    if(updated) {
+                        pendingRecordDeaths.add((ServerRecord) server);
+                        System.out.println("Declared server dead by gossip + " + server.getServerPort());
                     }
-                } catch(UnknownHostException uhe){
-                    System.err.println("Unknown Host, cannot remove server: " + uhe.getMessage());
+
                 }
             }
             //the server update is about us

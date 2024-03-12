@@ -79,6 +79,8 @@ public class DeathRegistrar extends TimerTask {
             return;
         }
 
+        System.out.println("Q has items: " + broadcastQueue.size());
+
         if(broadcastQueue.containsKey(self))
         {
             System.out.println("broadcasting self to: " + target.getPort());
@@ -139,6 +141,7 @@ public class DeathRegistrar extends TimerTask {
             if(responses.get(i) == KVServerTaskHandler.STAT_CODE_OLD && random.nextInt(K) == 0)
             {
                 //delete the response
+                System.out.println("removing from bc " + l.get(i).getServerPort());
                 broadcastQueue.remove( (ServerRecord) l.get(i));
             }
         }
@@ -192,9 +195,9 @@ public class DeathRegistrar extends TimerTask {
      */
     private void checkSelfSuspended() {
         long currentTime = Instant.now().toEpochMilli();
-        broadcastQueue.clear();
         if (currentTime - previousPingSendTime > GOSSIP_INTERVAL + SUSPENDED_THRESHOLD) {
             // TODO: check for self loopback
+            broadcastQueue.clear();
             self.setLastSeenNow();
             ring.setServerAlive(self);
 
