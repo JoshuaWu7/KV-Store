@@ -25,8 +25,9 @@ import static com.g7.CPEN431.A7.KVServer.selfLoopback;
 public class ConsistentMap {
     private final TreeMap<Integer, VNode> ring;
     private final int VNodes;
-    private final ReadWriteLock lock;
+    private final ReentrantReadWriteLock lock;
     private int current = 0;
+    private String serverPathName;
 
 
     /**
@@ -35,28 +36,32 @@ public class ConsistentMap {
      * @param serverPathName path to txt file containing server IP addresses + port
      * @throws IOException if cannot read txt file.
      */
-    public ConsistentMap(int vNodes, String serverPathName) throws IOException  {
+    public ConsistentMap(int vNodes, String serverPathName) {
         this.ring = new TreeMap<>();
         this.VNodes = vNodes;
         this.lock = new ReentrantReadWriteLock();
+        this.serverPathName = serverPathName;
 
         // Parse the txt file with all servers.
         Path path = Paths.get(serverPathName);
-        List<String> serverList = Files.readAllLines(path , StandardCharsets.UTF_8);
-
-        for(String server : serverList)
-        {
-            String[] serverNPort = server.split(":");
-            InetAddress addr = InetAddress.getByName(serverNPort[0]);
-            int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
-
-            ServerRecord serverRecord = addServerPrivate(addr, port);
-
-            /* only activated during initialization, initializes current ptr */
-            if(serverRecord.equals(self) || serverRecord.equals(selfLoopback))
+        try {
+            List<String> serverList = Files.readAllLines(path , StandardCharsets.UTF_8);
+            for(String server : serverList)
             {
-                this.current = new VNode(self, 0).getHash() + 1;
+                String[] serverNPort = server.split(":");
+                InetAddress addr = InetAddress.getByName(serverNPort[0]);
+                int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
+
+                ServerRecord serverRecord = addServerPrivate(addr, port);
+
+                /* only activated during initialization, initializes current ptr */
+                if(serverRecord.equals(self) || serverRecord.equals(selfLoopback))
+                {
+                    this.current = new VNode(self, 0).getHash() + 1;
+                }
             }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -109,8 +114,8 @@ public class ConsistentMap {
      */
     public void removeServer(ServerRecord r)
     {
+        System.out.println("removing: " + r.getPort());
         lock.writeLock().lock();
-        System.out.println("removed server " + r.getPort());
         for(int i = 0; i < VNodes; i++)
         {
             int hashcode = new VNode(r, i).getHash();
@@ -386,7 +391,6 @@ public class ConsistentMap {
             }
 
             lock.writeLock().unlock();
-            System.out.println("Server declared alive by gossip, Port: " + realCopy.getPort());
             return true;
         }
         /* If the incoming incomingRecord is older, do nothing */
@@ -488,6 +492,44 @@ public class ConsistentMap {
         });
         lock.readLock().unlock();
         return m.values();
+    }
+
+    public List<ServerRecord> resetMap()
+    {
+        lock.writeLock().lock();
+
+        List<ServerRecord> serverlist = new ArrayList<>();
+
+        ring.clear();
+
+        Path path = Paths.get(serverPathName);
+        try {
+            List<String> serverList = Files.readAllLines(path , StandardCharsets.UTF_8);
+            for(String server : serverList)
+            {
+                String[] serverNPort = server.split(":");
+                InetAddress addr = InetAddress.getByName(serverNPort[0]);
+                int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
+
+                //reentrancy required
+                ServerRecord serverRecord = addServerPrivate(addr, port);
+                serverlist.add(new ServerRecord(serverRecord));
+
+                /* only activated during initialization, initializes current ptr */
+                if(serverRecord.equals(self) || serverRecord.equals(selfLoopback))
+                {
+                    this.current = new VNode(self, 0).getHash() + 1;
+                    serverlist.removeLast();
+                }
+            }
+        } catch (IOException e) {
+            lock.writeLock().unlock();
+            throw new RuntimeException(e);
+        }
+
+        lock.writeLock().unlock();
+
+        return serverlist;
     }
 
 

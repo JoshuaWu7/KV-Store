@@ -28,9 +28,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -63,6 +61,7 @@ public class KVServerTaskHandler implements Runnable {
     final private boolean isOverloaded;
     final private ConcurrentLinkedQueue<DatagramPacket> outbound;
     final private ConcurrentLinkedQueue<ServerRecord>pendingRecordDeaths;
+    ExecutorService threadPool;
 
     /* Constants */
     public final static int KEY_MAX_LEN = 32;
@@ -111,7 +110,8 @@ public class KVServerTaskHandler implements Runnable {
                                boolean isOverloaded,
                                ConcurrentLinkedQueue<DatagramPacket> outbound,
                                ConsistentMap serverRing,
-                               ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths) {
+                               ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths,
+                               ExecutorService threadPool) {
         this.iPacket = iPacket;
         this.requestCache = requestCache;
         this.map = map;
@@ -122,6 +122,7 @@ public class KVServerTaskHandler implements Runnable {
         this.outbound = outbound;
         this.serverRing = serverRing;
         this.pendingRecordDeaths = pendingRecordDeaths;
+        this.threadPool = threadPool;
 
     }
 
@@ -453,7 +454,6 @@ public class KVServerTaskHandler implements Runnable {
             return generateAndSend(res);
         }
 
-        System.out.println("received isAlive " + iPacket.getPort());
         RequestCacheValue res = scaf.setResponseType(ISALIVE).build();
         return generateAndSend(res);
     }
@@ -725,6 +725,7 @@ public class KVServerTaskHandler implements Runnable {
     public List<Integer> getDeathCodes(List<ServerEntry> deadServers, ServerRecord us) {
         List<Integer> serverStatusCodes = new ArrayList<>();
         assert pendingRecordDeaths != null;
+        boolean serverRingUpdated = false;
         for (ServerEntry server: deadServers) {
             //verify that the server in the death update is not us
             if (!us.equals(server) && !selfLoopback.equals(server)) {
@@ -734,9 +735,10 @@ public class KVServerTaskHandler implements Runnable {
                     boolean updated = serverRing.updateServerRecord((ServerRecord) server);
                     serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
 
+                    serverRingUpdated = serverRingUpdated || updated;
+
                     if(updated)
                     {
-                        System.out.println("declared server alive by gossip" + ((ServerRecord) server).getPort());
                         pendingRecordDeaths.add((ServerRecord) server);
                     }
                 }
@@ -748,9 +750,10 @@ public class KVServerTaskHandler implements Runnable {
                     boolean updated = serverRing.removeServersAtomic((ServerRecord) server);
                     serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
 
+                    serverRingUpdated = serverRingUpdated || updated;
+
                     if(updated) {
                         pendingRecordDeaths.add((ServerRecord) server);
-                        System.out.println("Declared server dead by gossip + " + server.getServerPort());
                     }
 
                 }
@@ -769,7 +772,10 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         /* Key transfer after ring state is up-to-date */
-        transferKeys();
+        if(serverRingUpdated)
+        {
+            transferKeys();
+        }
 
         return serverStatusCodes;
     }
@@ -780,78 +786,7 @@ public class KVServerTaskHandler implements Runnable {
      */
 
     private void transferKeys() {
-
-        mapLock.writeLock().lock();
-
-        Collection<ForwardList> toBeForwarded = serverRing.getEntriesToBeForwarded(this.map.entrySet());
-
-        byte[] byteArr;
-        while((byteArr = bytePool.poll()) == null) Thread.yield();
-
-        KVClient sender = new KVClient(byteArr);
-
-        //TODO check size.
-        byte[] finalByteArr = byteArr;
-        toBeForwarded.forEach((forwardList -> {
-            ServerRecord target = forwardList.getDestination();
-            sender.setDestination(target.getAddress(), target.getPort());
-            try {
-                System.out.println("transferring out " + forwardList.getKeyEntries().size() + "keys");
-                List<PutPair> temp = new ArrayList<>();
-                int currPacketSize = 0;
-                for (PutPair pair : forwardList.getKeyEntries()) {
-                    //take an "engineering" approximation, because serialization is expensive
-                    int pairLen = pair.getKey().length + pair.getValue().length + Integer.BYTES;
-
-                    //clear the outgoing buffer and send the packet
-                    if(currPacketSize + pairLen >= BULKPUT_MAX_SZ)
-                    {
-                        System.out.println("sending" + temp.size() + "pairs");
-                        sender.setDestination(target.getAddress(), target.getPort());
-                        ServerResponse res = sender.bulkPut(temp);
-                        temp.clear();
-                        currPacketSize = 0;
-                    }
-                    //add to the buffer.
-                    temp.add(pair);
-                    currPacketSize += pairLen;
-
-                }
-                //clear the buffer.
-                System.out.println("sending" + temp.size() + "pairs");
-                if(temp.size() > 0) sender.bulkPut(temp);
-            } catch (KVClient.ServerTimedOutException e) {
-                // TODO: Probably a wise idea to redirect the keys someplace else, but that is a problem for future me.
-                System.out.println("Bulk transfer timed out. Marking recipient as dead.");
-                serverRing.setServerDeadNow(target);
-                pendingRecordDeaths.add(target);
-                serverRing.removeServer(target);
-                mapLock.writeLock().unlock();
-                return;
-            } catch (KVClient.MissingValuesException e) {
-                bytePool.offer(finalByteArr);
-                mapLock.writeLock().unlock();
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                bytePool.offer(finalByteArr);
-                mapLock.writeLock().unlock();
-                throw new RuntimeException(e);
-            } catch (IOException e) {
-                    bytePool.offer(finalByteArr);
-                    mapLock.writeLock().unlock();
-                    throw new RuntimeException(e);
-            }
-
-            /* remove entries in our own server */
-            forwardList.getKeyEntries().forEach((entry) ->
-            {
-                map.remove(new KeyWrapper(entry.getKey()));
-                bytesUsed.addAndGet(-entry.getValue().length);
-            });
-        }));
-
-        mapLock.writeLock().unlock();
-        bytePool.offer(finalByteArr);
+        threadPool.submit(new KeyTransferHandler(mapLock, map, bytesUsed, serverRing, pendingRecordDeaths));
     }
 
     // Custom Exceptions

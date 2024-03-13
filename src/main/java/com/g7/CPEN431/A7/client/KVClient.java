@@ -30,7 +30,7 @@ public class KVClient {
     int testSequence;
     UnwrappedMessage messageOnWire;
 
-    public final static int timeout = 100;
+    public final static int timeout = 300;
 
     /* Test Result codes */
     public final static int TEST_FAILED = 0;
@@ -366,7 +366,7 @@ public class KVClient {
         messageOnWire = req;
 
         UnwrappedMessage res = null;
-        while (tries < 5 && !success)
+        while (tries < 4 && !success)
         {
             socket.send(p);
             try {
@@ -404,7 +404,7 @@ public class KVClient {
 
         socket.setSoTimeout(initTimeout);
 
-        if(tries == 5 && !success) {
+        if(tries == 4 && !success) {
             throw new ServerTimedOutException();
         }
 

@@ -23,10 +23,9 @@ public class DeathRegistrar extends TimerTask {
     ConsistentMap ring;
     KVClient sender;
     Random random;
-    Timer scheduler;
 
     long previousPingSendTime;
-    final static int SUSPENDED_THRESHOLD = 1000;
+    final static int SUSPENDED_THRESHOLD = 5_000;
     final static int K = 6;
 
     public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring)
@@ -36,7 +35,7 @@ public class DeathRegistrar extends TimerTask {
         this.ring = ring;
         this.sender = new KVClient(null, 0, new DatagramSocket(), new byte[16384]);
         this.random = new Random();
-        this.previousPingSendTime = Instant.now().toEpochMilli();
+        this.previousPingSendTime = -1;
     }
 
     @Override
@@ -46,6 +45,8 @@ public class DeathRegistrar extends TimerTask {
         checkSelfSuspended();
         checkIsAlive();
         gossip();
+
+        previousPingSendTime = Instant.now().toEpochMilli();
     }
 
     private void updateBroadcastQueue()
@@ -79,12 +80,6 @@ public class DeathRegistrar extends TimerTask {
             return;
         }
 
-        System.out.println("Q has items: " + broadcastQueue.size());
-
-        if(broadcastQueue.containsKey(self))
-        {
-            System.out.println("broadcasting self to: " + target.getPort());
-        }
 
         if(!target.hasServerAddress() || !target.hasServerPort())
         {
@@ -141,7 +136,6 @@ public class DeathRegistrar extends TimerTask {
             if(responses.get(i) == KVServerTaskHandler.STAT_CODE_OLD && random.nextInt(K) == 0)
             {
                 //delete the response
-                System.out.println("removing from bc " + l.get(i).getServerPort());
                 broadcastQueue.remove( (ServerRecord) l.get(i));
             }
         }
@@ -177,8 +171,6 @@ public class DeathRegistrar extends TimerTask {
             throw new RuntimeException(e);
         } catch (KVClient.ServerTimedOutException e) {
             // Update server death time to current time, then add to list of deaths
-            System.out.println("Server declared dead by isAlive ping");
-            System.out.println("Port: " + target.getPort());
 
             ring.setServerDeadNow(target);
             ring.removeServer(target);
@@ -195,9 +187,13 @@ public class DeathRegistrar extends TimerTask {
      */
     private void checkSelfSuspended() {
         long currentTime = Instant.now().toEpochMilli();
+        previousPingSendTime = previousPingSendTime == -1 ? currentTime : previousPingSendTime;
         if (currentTime - previousPingSendTime > GOSSIP_INTERVAL + SUSPENDED_THRESHOLD) {
+            System.out.println("Suspension detected");
             // TODO: check for self loopback
             broadcastQueue.clear();
+            pingAllServers(ring.resetMap());
+
             self.setLastSeenNow();
             ring.setServerAlive(self);
 
@@ -206,5 +202,30 @@ public class DeathRegistrar extends TimerTask {
 
         previousPingSendTime = currentTime;
 
+    }
+
+    private void pingAllServers(List<ServerRecord> list)
+    {
+
+        assert list != null;
+
+        for(ServerRecord server : list)
+        {
+            if(server.equals(self) || server.equals(selfLoopback)) continue;
+
+            sender.setDestination(server.getAddress(), server.getPort());
+            try {
+                sender.isAlive();
+                ring.setServerAlive(server);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (KVClient.ServerTimedOutException e) {
+                ring.removeServer(server);
+            } catch (KVClient.MissingValuesException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }

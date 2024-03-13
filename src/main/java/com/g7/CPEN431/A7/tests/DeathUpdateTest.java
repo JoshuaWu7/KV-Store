@@ -38,11 +38,7 @@ public class DeathUpdateTest {
     @BeforeEach
     @DisplayName("setup")
     public void setup() throws UnknownHostException {
-        try {
-            ring = new ConsistentMap(num_vnode, "servers.txt");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        ring = new ConsistentMap(num_vnode, "servers.txt");
         servers = new ArrayList<>();
         pendingRecordDeaths = new ConcurrentLinkedQueue<>();
         taskHandler = new KVServerTaskHandler(ring, pendingRecordDeaths);

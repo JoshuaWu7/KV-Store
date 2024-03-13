@@ -28,7 +28,7 @@ public class KVServer
 {
     /* Default port, overwritten by cmd line */
     static int PORT = 13788;
-    final static int N_THREADS = 5;
+    final static int N_THREADS = 3;
     static final int PACKET_MAX = 16384;
     final static long CACHE_EXPIRY = 1;
     final static int QUEUE_MAX = 8;
@@ -39,8 +39,8 @@ public class KVServer
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
     final static int GOSSIP_INTERVAL = 500;
-    final static int GOSSIP_WAIT_INIT = 8000;
-    final static int BULKPUT_MAX_SZ = 12000;
+    final static int GOSSIP_WAIT_INIT = 10_000;
+    public final static int BULKPUT_MAX_SZ = 12000;
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
 
@@ -148,7 +148,8 @@ public class KVServer
                         isOverloaded,
                         outbound,
                         serverRing,
-                        pendingRecordDeaths));
+                        pendingRecordDeaths,
+                        executor));
 
                 /* Executed here in single thread impl. */
 //                while(!outbound.isEmpty())
