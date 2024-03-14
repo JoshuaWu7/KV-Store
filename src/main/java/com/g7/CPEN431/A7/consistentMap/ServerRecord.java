@@ -124,6 +124,12 @@ public class ServerRecord implements ServerEntry {
         setCode(CODE_ALI);
     }
 
+    public void setLastSeenFuture(long delay)
+    {
+        setInformationTime(Instant.now().toEpochMilli() + delay);
+        setCode(CODE_ALI);
+    }
+
     public void setLastSeenDeadNow()
     {
         setInformationTime(Instant.now().toEpochMilli());
