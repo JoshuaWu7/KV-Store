@@ -3,6 +3,8 @@
 SERVER_COUNT=1
 START_PORT=43100
 END_PORT=$(($START_PORT + $SERVER_COUNT - 1))
+N_THREADS=16
+MEM_MAX=60817408
 
 cd testjar
 
@@ -24,7 +26,11 @@ do
   --add-opens=java.base/java.io=ALL-UNNAMED \
   --add-opens=java.base/java.util=ALL-UNNAMED \
   -jar A7.jar \
-  $i >serverlog.log 2>&1 </dev/null&
+  $i \
+  $MEM_MAX \
+  $N_THREADS \
+  >serverlog.log 2>&1 </dev/null&
+
 done
 
 echo "Client tester server setup complete"
