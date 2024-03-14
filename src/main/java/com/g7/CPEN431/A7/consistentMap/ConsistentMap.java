@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -28,6 +29,7 @@ public class ConsistentMap {
     private final ReentrantReadWriteLock lock;
     private int current = 0;
     private String serverPathName;
+    private static final int MIN_UPDATE_PERIOD =  5000;
 
 
     /**
@@ -114,7 +116,6 @@ public class ConsistentMap {
      */
     public void removeServer(ServerRecord r)
     {
-        System.out.println("removing: " + r.getPort());
         lock.writeLock().lock();
         for(int i = 0; i < VNodes; i++)
         {
@@ -204,29 +205,41 @@ public class ConsistentMap {
     /**
      * Sets the corresponding physical server's record time to the current time,
      * and marks it as alive. If it does not exist, the record will be added.
+     * A minimum time of MAX_UPDATE_PERIOD between updates is enforced.
      * @param r Server record (can be clone) who's record is to be amended.
      */
-    public void setServerAlive(ServerRecord r) {
+    public boolean setServerAlive(ServerRecord r) {
         lock.writeLock().lock();
         int hashcode = new VNode(r, 0).getHash();
         VNode vnode = ring.get(hashcode);
+        boolean updated = true;
 
-        r.setLastSeenNow();
 
         if(vnode == null)
         {
+            r.setLastSeenNow();
             addServer(r.getAddress(), r.getPort());
+            updated = true;
+        }
+        else if (Instant.now().toEpochMilli() - vnode.serverRecord.getInformationTime() > MIN_UPDATE_PERIOD)
+        {
+            r.setLastSeenNow();
+            vnode.serverRecord.setLastSeenNow();
+            updated = true;
         }
         else
         {
-            vnode.serverRecord.setLastSeenNow();
+            updated = false;
         }
 
         lock.writeLock().unlock();
+
+        return updated;
     }
 
     /**
-     * Sets the corresppnding server as dead. If the server does not exist, there are no side effects.
+     * Sets the corresponding server as dead. If the server does not exist, there are no side effects.
+     * There is a minimum time of MIN_UPDATE_PERIOD between any updates to the information time.
      * @param r
      */
     public void setServerDeadNow(ServerRecord r)
@@ -237,54 +250,13 @@ public class ConsistentMap {
 
         r.setLastSeenDeadNow();
 
-        if(vnode != null) {
+        if(vnode != null && Instant.now().toEpochMilli() - vnode.serverRecord.getInformationTime() > MIN_UPDATE_PERIOD) {
             vnode.serverRecord.setLastSeenDeadNow();
         };
 
         lock.writeLock().unlock();
     }
 
-    /**
-     * Sets the server information time. No side effects if server does not exist
-     * @param r - Server record of physical server (can be clone, just match IP and port)
-     * @param informationTime - information time to be set
-     */
-    public void setServerInformationTime(ServerRecord r, long informationTime)
-    {
-        lock.writeLock().lock();
-        int hashcode = new VNode(r, 0).getHash();
-        VNode vnode = ring.get(hashcode);
-
-        r.setInformationTime(informationTime);
-
-        if(vnode != null)
-        {
-            vnode.serverRecord.setInformationTime(informationTime);
-        }
-
-        lock.writeLock().unlock();
-    }
-
-    /**
-     * Sets the server status code. No side fx if server does not exist.
-     * @param r - Server record of physical server (can be clone, match ip and port)
-     * @param statusCode new status code to set the server to.
-     */
-    public void setServerStatusCode(ServerRecord r, int statusCode)
-    {
-        lock.writeLock().lock();
-        int hashcode = new VNode(r, 0).getHash();
-        VNode vnode = ring.get(hashcode);
-
-        r.setCode(statusCode);
-
-        if(vnode != null)
-        {
-            vnode.serverRecord.setCode(statusCode);
-        }
-
-        lock.writeLock().unlock();
-    }
 
 
     /**
@@ -359,7 +331,8 @@ public class ConsistentMap {
 
     /**
      * Updates the server record to the latest one of the current server record
-     * in the ring, and incomingRecord.
+     * in the ring, and incomingRecord. A minimum waiting period of MIN_UPDATE_PERIOD
+     * is required between updates.
      * @param incomingRecord - incoming incomingRecord that will be considered for update.
      * @return true if incomingRecord was updated, false if not updated.
      */
@@ -382,8 +355,9 @@ public class ConsistentMap {
 
         /* If it does not exist, or is older, overwrite */
         if(existingVnode == null ||
-            incomingRecord.getInformationTime() > existingVnode.serverRecord.getInformationTime())
+            incomingRecord.getInformationTime() > existingVnode.serverRecord.getInformationTime() + MIN_UPDATE_PERIOD)
         {
+            System.out.println("server time updated");
             for(int i = 0; i < VNodes; i++)
             {
                 VNode vnode = new VNode(realCopy, i);
@@ -403,7 +377,8 @@ public class ConsistentMap {
 
     /**
      * Removes the server represented by incomingRecord if it exists, and
-     * the incomingRecord's later than the server record in the ring.
+     * the incomingRecord's later than the server record in the ring. A waiting
+     * period of MIN_UPDATE_PERIOD is required.
      * @param incomingRecord
      * @return true if the ring was updated, false otherwise.
      */
@@ -425,7 +400,8 @@ public class ConsistentMap {
         VNode existingVnode = ring.get(hashcode);
 
         /* If it does not exist, or is older, exit*/
-        if(existingVnode == null || existingVnode.serverRecord.getInformationTime() < incomingRecord.getInformationTime())
+        if(existingVnode == null ||
+                existingVnode.serverRecord.getInformationTime() > incomingRecord.getInformationTime() + MIN_UPDATE_PERIOD)
         {
             lock.writeLock().unlock();
             return false;
@@ -433,6 +409,7 @@ public class ConsistentMap {
         /* If it exists and the information is newer, remove */
         else
         {
+            System.out.println("server record removed");
             removeServer(incomingRecord);
             lock.writeLock().unlock();
             return true;
@@ -445,10 +422,25 @@ public class ConsistentMap {
      */
     public int getServerCount() {
         int count;
+        System.out.println("total nodes: " + ring.size());
         lock.readLock().lock();
         count = ring.size() / VNodes;
         lock.readLock().unlock();
         return count;
+    }
+
+    public boolean wasRecentlyUpdated(ServerRecord r)
+    {
+        lock.readLock().lock();
+        VNode actualVnode = ring.get(new VNode(r, 0).getHash());
+        if(actualVnode == null)
+        {
+            lock.readLock().unlock();
+            return true;
+        }
+        long infoTime = ring.get(new VNode(r, 0).getHash()).serverRecord.getInformationTime();
+        lock.readLock().unlock();
+        return Instant.now().toEpochMilli() - infoTime <= MIN_UPDATE_PERIOD;
     }
 
 
@@ -492,6 +484,18 @@ public class ConsistentMap {
         });
         lock.readLock().unlock();
         return m.values();
+    }
+
+    public Collection<ServerRecord> getAllRecords()
+    {
+        lock.readLock().lock();
+        Set<ServerRecord> allServers = new HashSet<>();
+        for(VNode vnode : ring.values())
+        {
+            allServers.add(vnode.getServerRecordClone());
+        }
+        lock.readLock().unlock();
+        return allServers;
     }
 
     public List<ServerRecord> resetMap()

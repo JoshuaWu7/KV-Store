@@ -11,6 +11,7 @@ import java.net.DatagramSocket;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -23,12 +24,13 @@ public class DeathRegistrar extends TimerTask {
     ConsistentMap ring;
     KVClient sender;
     Random random;
+    AtomicLong lastReqTime;
 
     long previousPingSendTime;
-    final static int SUSPENDED_THRESHOLD = 5_000;
-    final static int K = 6;
+    final static int SUSPENDED_THRESHOLD = 5000;
+    final static int K = 10;
 
-    public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring)
+    public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring, AtomicLong lastReqTime)
     throws IOException {
         this.broadcastQueue = new HashMap<>();
         this.pendingRecords = pendingRecords;
@@ -36,6 +38,7 @@ public class DeathRegistrar extends TimerTask {
         this.sender = new KVClient(null, 0, new DatagramSocket(), new byte[16384]);
         this.random = new Random();
         this.previousPingSendTime = -1;
+        this.lastReqTime = lastReqTime;
     }
 
     @Override
@@ -158,23 +161,28 @@ public class DeathRegistrar extends TimerTask {
 
             /* omit this round if next server is equal to self */
             if(target.equals(selfLoopback) || target.equals(self) ||
-                   Instant.now().toEpochMilli() - target.getInformationTime() < 2000)
+                   Instant.now().toEpochMilli() - target.getInformationTime() < 10_000)
             {
                 return;
             }
 
             sender.setDestination(target.getAddress(), target.getServerPort());
             sender.isAlive();
-            ring.setServerAlive(target);
+//            ring.setServerAlive(target);
         } catch (ConsistentMap.NoServersException | IOException | KVClient.MissingValuesException |
                  InterruptedException e) {
             throw new RuntimeException(e);
         } catch (KVClient.ServerTimedOutException e) {
             // Update server death time to current time, then add to list of deaths
+            if(!ring.wasRecentlyUpdated(target))
+            {
+                System.out.println("isalive ping timeout");
 
-            ring.setServerDeadNow(target);
-            ring.removeServer(target);
-            broadcastQueue.put(target, target);
+                ring.setServerDeadNow(target);
+                ring.removeServer(target);
+                broadcastQueue.put(target, target);
+            }
+
         }
     }
 
@@ -188,15 +196,12 @@ public class DeathRegistrar extends TimerTask {
     private void checkSelfSuspended() {
         long currentTime = Instant.now().toEpochMilli();
         previousPingSendTime = previousPingSendTime == -1 ? currentTime : previousPingSendTime;
-        if (currentTime - previousPingSendTime > GOSSIP_INTERVAL + SUSPENDED_THRESHOLD) {
+        if (ring.getServerCount() != 1 && currentTime - lastReqTime.get() > GOSSIP_INTERVAL + SUSPENDED_THRESHOLD) {
             System.out.println("Suspension detected");
             // TODO: check for self loopback
             broadcastQueue.clear();
             pingAllServers(ring.resetMap());
-
-            self.setLastSeenNow();
             ring.setServerAlive(self);
-
             broadcastQueue.put(self, self);
         }
 

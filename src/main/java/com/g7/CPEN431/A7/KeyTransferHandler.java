@@ -43,6 +43,15 @@ public class KeyTransferHandler implements Runnable {
         transferKeys();
     }
 
+    private void floodRecords()
+    {
+        Collection<ServerRecord> allServers = serverRing.getAllRecords();
+        for(ServerRecord server: allServers)
+        {
+            pendingRecordDeaths.add(server);
+        }
+    }
+
     private void transferKeys() {
 
         mapLock.writeLock().lock();

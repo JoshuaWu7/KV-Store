@@ -26,10 +26,12 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -40,6 +42,7 @@ import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_DED;
 
 public class KVServerTaskHandler implements Runnable {
     /* Thread parameters */
+    private final AtomicLong lastReqTime;
     private final AtomicInteger bytesUsed;
     private final DatagramPacket iPacket;
     private final Cache<RequestCacheKey, DatagramPacket> requestCache;
@@ -67,8 +70,7 @@ public class KVServerTaskHandler implements Runnable {
     public final static int KEY_MAX_LEN = 32;
     public final static int VALUE_MAX_LEN = 10_000;
     public final static int CACHE_OVL_WAIT_TIME = 80;   // Temporarily unused since cache doesn't overflow
-    public final static int THREAD_OVL_WAIT_TIME = 16;
-    public final static int MAP_SZ = 60_817_408;
+    public final static int THREAD_OVL_WAIT_TIME = 80;
 
     /* Response Codes */
     public final static int RES_CODE_SUCCESS = 0x0;
@@ -111,7 +113,8 @@ public class KVServerTaskHandler implements Runnable {
                                ConcurrentLinkedQueue<DatagramPacket> outbound,
                                ConsistentMap serverRing,
                                ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths,
-                               ExecutorService threadPool) {
+                               ExecutorService threadPool,
+                               AtomicLong lastReqTime) {
         this.iPacket = iPacket;
         this.requestCache = requestCache;
         this.map = map;
@@ -123,6 +126,7 @@ public class KVServerTaskHandler implements Runnable {
         this.serverRing = serverRing;
         this.pendingRecordDeaths = pendingRecordDeaths;
         this.threadPool = threadPool;
+        this.lastReqTime = lastReqTime;
 
     }
 
@@ -138,6 +142,7 @@ public class KVServerTaskHandler implements Runnable {
         this.outbound = null;
         this.serverRing = serverRing;
         this.pendingRecordDeaths = pendingRecordDeaths;
+        this.lastReqTime = new AtomicLong();
     }
 
     // empty constructor for testing BulkPutTest
@@ -152,6 +157,7 @@ public class KVServerTaskHandler implements Runnable {
         this.outbound = null;
         this.serverRing = null;
         this.pendingRecordDeaths = null;
+        this.lastReqTime = new AtomicLong();
     }
 
 
@@ -159,6 +165,7 @@ public class KVServerTaskHandler implements Runnable {
     public void run()
     {
         try {
+            this.lastReqTime.set(Instant.now().toEpochMilli());
             mainHandlerFunction();
         } catch (Exception e) {
             System.err.println("Thread Crash");
@@ -748,7 +755,8 @@ public class KVServerTaskHandler implements Runnable {
                     /* remove the server from the ring and add to the pending queue if the server is in the ring (receiving news) and if
                      * the server record on the ring has been added before the death update */
                     boolean updated = serverRing.removeServersAtomic((ServerRecord) server);
-                    serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
+                    long currTime = Instant.now().toEpochMilli();
+                    serverStatusCodes.add(!updated && currTime - server.getInformationTime() > 5000 ? STAT_CODE_OLD : STAT_CODE_NEW);
 
                     serverRingUpdated = serverRingUpdated || updated;
 
