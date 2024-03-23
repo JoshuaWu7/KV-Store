@@ -737,40 +737,29 @@ public class KVServerTaskHandler implements Runnable {
             //verify that the server in the death update is not us
             if (!us.equals(server) && !selfLoopback.equals(server)) {
                 /* retrieve server address and port */
+                boolean updated = serverRing.updateServerState((ServerRecord) server);
+                serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
 
-                if (server.getCode() == CODE_ALI) {
-                    boolean updated = serverRing.updateServerRecord((ServerRecord) server);
-                    serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
-
-                    serverRingUpdated = serverRingUpdated || updated;
-
-                    if(updated)
-                    {
-                        pendingRecordDeaths.add((ServerRecord) server);
-                    }
-                }
-                /* it is dead */
-                else {
-
-                    /* remove the server from the ring and add to the pending queue if the server is in the ring (receiving news) and if
-                     * the server record on the ring has been added before the death update */
-                    boolean updated = serverRing.removeServersAtomic((ServerRecord) server);
-                    long currTime = Instant.now().toEpochMilli();
-                    serverStatusCodes.add(!updated && currTime - server.getInformationTime() > 5000 ? STAT_CODE_OLD : STAT_CODE_NEW);
-
-                    serverRingUpdated = serverRingUpdated || updated;
-
-                    if(updated) {
-                        pendingRecordDeaths.add((ServerRecord) server);
-                    }
-
+                if(updated)
+                {
+                    pendingRecordDeaths.add((ServerRecord) server);
                 }
             }
             //the server update is about us
             else {
                 if (server.getCode() == CODE_DED) {
-                    us.setLastSeenNow();
-                    pendingRecordDeaths.add(us);
+                    ServerRecord r = ((ServerRecord) server);
+                    if(self.getInformationTime() > r.getInformationTime() + 10_000)
+                    {
+                        //do nothing
+                        pendingRecordDeaths.add(self);
+                    }
+                    else
+                    {
+                        r.setAliveAtTime(r.getInformationTime() + 10_000);
+                        serverRing.updateServerState(r);
+                        pendingRecordDeaths.add(r);
+                    }
                     serverStatusCodes.add(STAT_CODE_OLD);
                 } else {
                     //continue propagating the message

@@ -93,9 +93,6 @@ public class KeyTransferHandler implements Runnable {
             } catch (KVClient.ServerTimedOutException e) {
                 // TODO: Probably a wise idea to redirect the keys someplace else, but that is a problem for future me.
                 System.out.println("Bulk transfer timed out. Marking recipient as dead.");
-                serverRing.setServerDeadNow(target);
-                pendingRecordDeaths.add(target);
-                serverRing.removeServer(target);
                 mapLock.writeLock().unlock();
                 return;
             } catch (KVClient.MissingValuesException e) {

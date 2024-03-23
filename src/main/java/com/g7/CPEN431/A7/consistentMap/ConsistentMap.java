@@ -2,6 +2,7 @@ package com.g7.CPEN431.A7.consistentMap;
 
 import com.g7.CPEN431.A7.map.KeyWrapper;
 import com.g7.CPEN431.A7.map.ValueWrapper;
+import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -30,6 +31,7 @@ public class ConsistentMap {
     private int current = 0;
     private String serverPathName;
     private static final int MIN_UPDATE_PERIOD =  5000;
+    Map<ServerRecord, ServerRecord> allRecords;
 
 
     /**
@@ -43,6 +45,7 @@ public class ConsistentMap {
         this.VNodes = vNodes;
         this.lock = new ReentrantReadWriteLock();
         this.serverPathName = serverPathName;
+        this.allRecords = new HashMap<>();
 
         // Parse the txt file with all servers.
         Path path = Paths.get(serverPathName);
@@ -67,15 +70,6 @@ public class ConsistentMap {
         }
     }
 
-    /**
-     *
-     * @param address IP address of server to add
-     * @param port of the server to add
-     */
-    public void addServer(InetAddress address, int port)
-    {
-        addServerPrivate(address, port);
-    }
 
     /**
      * Do not use this in public, since invariants are broken, leading to concurrency guarantees failing
@@ -86,6 +80,7 @@ public class ConsistentMap {
     private ServerRecord addServerPrivate(InetAddress address, int port)
     {
         ServerRecord newServer = new ServerRecord(address, port);
+        this.allRecords.put(newServer, newServer);
 
         lock.writeLock().lock();
         for(int i = 0; i < VNodes; i++)
@@ -96,35 +91,6 @@ public class ConsistentMap {
         lock.writeLock().unlock();
 
         return newServer;
-    }
-
-    /**
-     * Has no effects if server does not exist
-     * @param address IP address of server to remove
-     * @param port of server to remove
-     *
-     */
-    public void removeServer(InetAddress address, int port)
-    {
-        ServerRecord r = new ServerRecord(address, port);
-        removeServer(r);
-    }
-
-    /**
-     * This is now the standard method to remove servers
-     * @param r server record
-     */
-    public void removeServer(ServerRecord r)
-    {
-        lock.writeLock().lock();
-        for(int i = 0; i < VNodes; i++)
-        {
-            int hashcode = new VNode(r, i).getHash();
-            ring.remove(hashcode);
-        }
-
-
-        lock.writeLock().unlock();
     }
 
     /**
@@ -203,61 +169,57 @@ public class ConsistentMap {
     }
 
     /**
-     * Sets the corresponding physical server's record time to the current time,
-     * and marks it as alive. If it does not exist, the record will be added.
-     * A minimum time of MAX_UPDATE_PERIOD between updates is enforced.
-     * @param r Server record (can be clone) who's record is to be amended.
+     * Updates the server state (dead or alive) if the record r is newer than the preexisting record.
+     * @param r The new server record
+     * @return true if updated, false if not
      */
-    public boolean setServerAlive(ServerRecord r) {
-        lock.writeLock().lock();
-        int hashcode = new VNode(r, 0).getHash();
-        VNode vnode = ring.get(hashcode);
-        boolean updated = true;
-
-
-        if(vnode == null)
-        {
-            r.setLastSeenNow();
-            addServer(r.getAddress(), r.getPort());
-            updated = true;
-        }
-        else if (Instant.now().toEpochMilli() - vnode.serverRecord.getInformationTime() > MIN_UPDATE_PERIOD)
-        {
-            r.setLastSeenNow();
-            vnode.serverRecord.setLastSeenNow();
-            updated = true;
-        }
-        else
-        {
-            updated = false;
-        }
-
-        lock.writeLock().unlock();
-
-        return updated;
-    }
-
-    /**
-     * Sets the corresponding server as dead. If the server does not exist, there are no side effects.
-     * There is a minimum time of MIN_UPDATE_PERIOD between any updates to the information time.
-     * @param r
-     */
-    public void setServerDeadNow(ServerRecord r)
+    public boolean updateServerState(ServerRecord r)
     {
         lock.writeLock().lock();
-        int hashcode = new VNode(r, 0).getHash();
-        VNode vnode = ring.get(hashcode);
+        ServerRecord actualRecord = allRecords.get(r);
+        boolean updated = false;
 
-        r.setLastSeenDeadNow();
+        if(actualRecord == null)
+        {
+            lock.writeLock().unlock();
+            throw new IllegalStateException("All servers not initially added");
+        }
 
-        if(vnode != null && Instant.now().toEpochMilli() - vnode.serverRecord.getInformationTime() > MIN_UPDATE_PERIOD) {
-            vnode.serverRecord.setLastSeenDeadNow();
-        };
+        //check the information time
+        if(r.getInformationTime() > actualRecord.getInformationTime())
+        {
 
+            //from alive to dead
+            if(actualRecord.isAlive() && !r.isAlive())
+            {
+                //remove from the ring
+                for(int i = 0; i < VNodes; i++)
+                {
+                    VNode v = new VNode(actualRecord, i);
+                    ring.remove(v.getHash());
+                }
+            }
+            // resurrection
+            else if (!actualRecord.isAlive() && r.isAlive())
+            {
+                for(int i = 0; i < VNodes; i++)
+                {
+                    VNode v = new VNode(actualRecord, i);
+                    ring.put(v.getHash(), v);
+                }
+            }
+            //otherwise, it must be in the same state, thus ring does not need to be changed.
+
+            //sync the code and information time
+            actualRecord.setCode(r.getCode());
+            actualRecord.setInformationTime(r.getInformationTime());
+
+            updated = true;
+            System.out.println(getServerCount());
+        }
         lock.writeLock().unlock();
+        return updated;
     }
-
-
 
     /**
      * Helper function to hash any byte array to int
@@ -296,126 +258,6 @@ public class ConsistentMap {
         return hasKey;
     }
 
-    public boolean hasServer(ServerRecord r)
-    {
-        int hashcode = new VNode(r, 0).getHash();
-        lock.readLock().lock();
-        boolean hasKey = ring.containsKey(hashcode);
-        lock.readLock().unlock();
-        return hasKey;
-    }
-
-    /**
-     * get server by address and port
-     * @param addr
-     * @param port
-     * @return
-     */
-    public ServerRecord getServerByAddress(InetAddress addr, int port){
-        Integer hashcode = new VNode(new ServerRecord(addr, port), 0).getHash();
-        lock.readLock().lock();
-        if(ring.isEmpty())
-        {
-            lock.readLock().unlock();
-            throw new NoServersException();
-        }
-
-        Map.Entry<Integer, VNode> server = ring.ceilingEntry(hashcode);
-        /* Deal with case where the successor of the key is past "0" */
-        server = (server == null) ? ring.firstEntry(): server;
-
-        lock.readLock().unlock();
-
-        return server.getValue().getServerRecordClone();
-    }
-
-    /**
-     * Updates the server record to the latest one of the current server record
-     * in the ring, and incomingRecord. A minimum waiting period of MIN_UPDATE_PERIOD
-     * is required between updates.
-     * @param incomingRecord - incoming incomingRecord that will be considered for update.
-     * @return true if incomingRecord was updated, false if not updated.
-     */
-    public boolean updateServerRecord(ServerRecord incomingRecord)
-    {
-        ServerRecord realCopy = new ServerRecord(incomingRecord);
-
-        lock.writeLock().lock();
-        if(ring.isEmpty())
-        {
-            lock.writeLock().unlock();
-            throw new NoServersException();
-        }
-
-        /* Compare the times of the server incomingRecord */
-        int hashcode = new VNode(realCopy, 0).getHash();
-
-        /* Check if it exists */
-        VNode existingVnode = ring.get(hashcode);
-
-        /* If it does not exist, or is older, overwrite */
-        if(existingVnode == null ||
-            incomingRecord.getInformationTime() > existingVnode.serverRecord.getInformationTime() + MIN_UPDATE_PERIOD)
-        {
-            System.out.println("server time updated");
-            for(int i = 0; i < VNodes; i++)
-            {
-                VNode vnode = new VNode(realCopy, i);
-                ring.put(vnode.getHash(), vnode);
-            }
-
-            lock.writeLock().unlock();
-            return true;
-        }
-        /* If the incoming incomingRecord is older, do nothing */
-        else
-        {
-            lock.writeLock().unlock();
-            return false;
-        }
-    }
-
-    /**
-     * Removes the server represented by incomingRecord if it exists, and
-     * the incomingRecord's later than the server record in the ring. A waiting
-     * period of MIN_UPDATE_PERIOD is required.
-     * @param incomingRecord
-     * @return true if the ring was updated, false otherwise.
-     */
-    public boolean removeServersAtomic(ServerRecord incomingRecord)
-    {
-        ServerRecord realCopy = new ServerRecord(incomingRecord);
-
-        lock.writeLock().lock();
-        if(ring.isEmpty())
-        {
-            lock.writeLock().unlock();
-            throw new NoServersException();
-        }
-
-        /* Compare the times of the server incomingRecord */
-        int hashcode = new VNode(realCopy, 0).getHash();
-
-        /* Check if it exists */
-        VNode existingVnode = ring.get(hashcode);
-
-        /* If it does not exist, or is older, exit*/
-        if(existingVnode == null ||
-                existingVnode.serverRecord.getInformationTime() > incomingRecord.getInformationTime() + MIN_UPDATE_PERIOD)
-        {
-            lock.writeLock().unlock();
-            return false;
-        }
-        /* If it exists and the information is newer, remove */
-        else
-        {
-            System.out.println("server record removed");
-            removeServer(incomingRecord);
-            lock.writeLock().unlock();
-            return true;
-        }
-    }
-
     /**
      * Get number of servers in the ring
      * @return number of servers
@@ -428,21 +270,6 @@ public class ConsistentMap {
         lock.readLock().unlock();
         return count;
     }
-
-    public boolean wasRecentlyUpdated(ServerRecord r)
-    {
-        lock.readLock().lock();
-        VNode actualVnode = ring.get(new VNode(r, 0).getHash());
-        if(actualVnode == null)
-        {
-            lock.readLock().unlock();
-            return true;
-        }
-        long infoTime = ring.get(new VNode(r, 0).getHash()).serverRecord.getInformationTime();
-        lock.readLock().unlock();
-        return Instant.now().toEpochMilli() - infoTime <= MIN_UPDATE_PERIOD;
-    }
-
 
     public Collection<ForwardList> getEntriesToBeForwarded(Set<Map.Entry<KeyWrapper, ValueWrapper>> entries)
     {
@@ -498,45 +325,17 @@ public class ConsistentMap {
         return allServers;
     }
 
-    public List<ServerRecord> resetMap()
+    public List<ServerEntry> getFullRecord()
     {
-        lock.writeLock().lock();
-
-        List<ServerRecord> serverlist = new ArrayList<>();
-
-        ring.clear();
-
-        Path path = Paths.get(serverPathName);
-        try {
-            List<String> serverList = Files.readAllLines(path , StandardCharsets.UTF_8);
-            for(String server : serverList)
-            {
-                String[] serverNPort = server.split(":");
-                InetAddress addr = InetAddress.getByName(serverNPort[0]);
-                int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
-
-                //reentrancy required
-                ServerRecord serverRecord = addServerPrivate(addr, port);
-                serverlist.add(new ServerRecord(serverRecord));
-
-                /* only activated during initialization, initializes current ptr */
-                if(serverRecord.equals(self) || serverRecord.equals(selfLoopback))
-                {
-                    this.current = new VNode(self, 0).getHash() + 1;
-                    serverlist.removeLast();
-                }
-            }
-        } catch (IOException e) {
-            lock.writeLock().unlock();
-            throw new RuntimeException(e);
+        lock.readLock().lock();
+        List<ServerEntry> allServers = new ArrayList<>();
+        for(ServerRecord r: allRecords.values())
+        {
+            allServers.add(new ServerRecord(r));
         }
-
-        lock.writeLock().unlock();
-
-        return serverlist;
+        lock.readLock().unlock();
+        return allServers;
     }
-
-
 
     public static class NoServersException extends IllegalStateException {}
     class ServerDoesNotExistException extends Exception {};

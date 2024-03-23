@@ -44,8 +44,8 @@ public class DeathRegistrar extends TimerTask {
     @Override
     public synchronized void run() {
         updateBroadcastQueue();
-        //check self suspended clears the queue, since anything in there is probably outdated.
         checkSelfSuspended();
+        //check self suspended clears the queue, since anything in there is probably outdated.
         checkIsAlive();
         gossip();
 
@@ -95,12 +95,13 @@ public class DeathRegistrar extends TimerTask {
         }
 
         sender.setDestination(target.getAddress(), target.getServerPort());
-        List<ServerEntry> l = new ArrayList<>(broadcastQueue.values());
+        List<ServerEntry> l = ring.getFullRecord();
         ServerResponse r;
         try {
             r = sender.isDead(l);
         } catch (KVClient.ServerTimedOutException e)
         {
+            System.out.println("gossip sending failed");
 //            System.out.println("Server declared dead by gossip response");
 //            System.out.println("Port: " + target.getAddress().toString() + ":" +target.getPort());
 //            ring.setServerDeadNow(target);
@@ -142,9 +143,6 @@ public class DeathRegistrar extends TimerTask {
 //                broadcastQueue.remove( (ServerRecord) l.get(i));
 //            }
 //        }
-
-        /* Mark the gosipee as alive */
-        ring.setServerAlive(target);
     }
 
     /**
@@ -174,15 +172,8 @@ public class DeathRegistrar extends TimerTask {
             throw new RuntimeException(e);
         } catch (KVClient.ServerTimedOutException e) {
             // Update server death time to current time, then add to list of deaths
-            if(!ring.wasRecentlyUpdated(target))
-            {
-                System.out.println("isalive ping timeout");
-
-                ring.setServerDeadNow(target);
-                ring.removeServer(target);
-                broadcastQueue.put(target, target);
-            }
-
+            target.setLastSeenDeadAt(System.currentTimeMillis());
+            ring.updateServerState(target);
         }
     }
 
@@ -196,12 +187,12 @@ public class DeathRegistrar extends TimerTask {
     private void checkSelfSuspended() {
         long currentTime = Instant.now().toEpochMilli();
         previousPingSendTime = previousPingSendTime == -1 ? currentTime : previousPingSendTime;
-        if (ring.getServerCount() != 1 && currentTime - lastReqTime.get() > GOSSIP_INTERVAL + SUSPENDED_THRESHOLD) {
+        if (ring.getServerCount() != 1 && currentTime - previousPingSendTime > GOSSIP_INTERVAL + SUSPENDED_THRESHOLD) {
             System.out.println("Suspension detected");
             // TODO: check for self loopback
             broadcastQueue.clear();
-            pingAllServers(ring.resetMap());
-            ring.setServerAlive(self);
+            self.setAliveAtTime(System.currentTimeMillis());
+            ring.updateServerState(self);
             broadcastQueue.put(self, self);
         }
 
@@ -209,28 +200,4 @@ public class DeathRegistrar extends TimerTask {
 
     }
 
-    private void pingAllServers(List<ServerRecord> list)
-    {
-
-        assert list != null;
-
-        for(ServerRecord server : list)
-        {
-            if(server.equals(self) || server.equals(selfLoopback)) continue;
-
-            sender.setDestination(server.getAddress(), server.getPort());
-            try {
-                sender.isAlive();
-                ring.setServerAlive(server);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } catch (KVClient.ServerTimedOutException e) {
-                ring.removeServer(server);
-            } catch (KVClient.MissingValuesException e) {
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
 }
