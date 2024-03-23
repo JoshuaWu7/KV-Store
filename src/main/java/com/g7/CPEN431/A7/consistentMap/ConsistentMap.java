@@ -264,7 +264,6 @@ public class ConsistentMap {
      */
     public int getServerCount() {
         int count;
-        System.out.println("total nodes: " + ring.size());
         lock.readLock().lock();
         count = ring.size() / VNodes;
         lock.readLock().unlock();

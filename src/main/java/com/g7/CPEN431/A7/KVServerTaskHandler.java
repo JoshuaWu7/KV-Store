@@ -742,6 +742,7 @@ public class KVServerTaskHandler implements Runnable {
 
                 if(updated)
                 {
+                    serverRingUpdated = true;
                     pendingRecordDeaths.add((ServerRecord) server);
                 }
             }

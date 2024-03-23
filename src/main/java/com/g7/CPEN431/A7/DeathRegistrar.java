@@ -95,6 +95,9 @@ public class DeathRegistrar extends TimerTask {
         }
 
         sender.setDestination(target.getAddress(), target.getServerPort());
+        //update myself every time I gossip
+        self.setAliveAtTime(System.currentTimeMillis());
+        ring.updateServerState(self);
         List<ServerEntry> l = ring.getFullRecord();
         ServerResponse r;
         try {
@@ -194,6 +197,24 @@ public class DeathRegistrar extends TimerTask {
             self.setAliveAtTime(System.currentTimeMillis());
             ring.updateServerState(self);
             broadcastQueue.put(self, self);
+
+
+            //send one by one
+            for(ServerEntry server : ring.getFullRecord())
+            {
+                sender.setDestination(((ServerRecord) server).getAddress(), server.getServerPort());
+                try {
+                    sender.isDead(ring.getFullRecord());
+                } catch (KVClient.MissingValuesException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                } catch (KVClient.ServerTimedOutException e) {
+                    System.out.println("Server is down");
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
 
         previousPingSendTime = currentTime;
