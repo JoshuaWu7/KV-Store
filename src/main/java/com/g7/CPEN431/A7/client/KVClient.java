@@ -4,12 +4,14 @@ package com.g7.CPEN431.A7.client;
 import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgFactory;
 import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgSerializer;
 import com.g7.CPEN431.A7.newProto.KVRequest.KVRequestSerializer;
+import com.g7.CPEN431.A7.newProto.KVRequest.PutPair;
 import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
 import com.g7.CPEN431.A7.newProto.KVResponse.KVResponseSerializer;
 import com.g7.CPEN431.A7.newProto.KVResponse.ServerResponseFactory;
 import com.g7.CPEN431.A7.wrappers.UnwrappedMessage;
 import com.g7.CPEN431.A7.wrappers.UnwrappedPayload;
 
+import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -28,6 +30,8 @@ public class KVClient {
     int testSequence;
     UnwrappedMessage messageOnWire;
 
+    public final static int timeout = 300;
+
     /* Test Result codes */
     public final static int TEST_FAILED = 0;
     public final static int TEST_PASSED = 1;
@@ -43,6 +47,7 @@ public class KVClient {
     public final static int REQ_CODE_PID = 0X07;
     public final static int REQ_CODE_MEM = 0X08;
     public final static int REQ_CODE_DED = 0x100;
+    public final static int REQ_CODE_BULKPUT = 0x200;
 
     public final static int RES_CODE_SUCCESS = 0x0;
     public final static int RES_CODE_NO_KEY = 0x1;
@@ -61,7 +66,11 @@ public class KVClient {
         this.socket = socket;
         this.publicBuf = publicBuf;
 
-        socket.setSoTimeout(100);
+        socket.setSoTimeout(timeout);
+    }
+
+    public KVClient(byte[] publicBuf){
+        this.publicBuf = publicBuf;
     }
 
     public KVClient(InetAddress serverAddress, int serverPort, DatagramSocket socket, byte[] publicBuf, int testSequence) {
@@ -74,6 +83,19 @@ public class KVClient {
 
     public void setDestination(InetAddress serverAddress, int serverPort)
     {
+        if(this.socket != null && !this.socket.isClosed())
+        {
+            this.socket.close();
+        }
+
+        //create a new socket to clear the buffer.
+        try {
+            this.socket = new DatagramSocket();
+            this.socket.setSoTimeout(timeout);
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
+
         this.serverAddress = serverAddress;
         this.serverPort = serverPort;
     }
@@ -186,6 +208,7 @@ public class KVClient {
 
         return sendAndReceiveServerResponse(pl);
     }
+
     private ServerResponse get(byte[] key) throws IOException, MissingValuesException, ServerTimedOutException, InterruptedException {
         /* Generate isAlive Message */
         UnwrappedPayload pl = new UnwrappedPayload();
@@ -203,6 +226,15 @@ public class KVClient {
 
         return res;
     }
+
+    public ServerResponse bulkPut(List<PutPair> pairs) throws IOException, ServerTimedOutException, MissingValuesException, InterruptedException {
+        UnwrappedPayload pl = new UnwrappedPayload();
+        assert pairs != null;
+        pl.setCommand(REQ_CODE_BULKPUT);
+        pl.setPutPair(pairs);
+        return sendAndReceiveServerResponse(pl);
+    }
+
     private ServerResponse put(byte[] key, byte[] value, int version) throws IOException, ServerTimedOutException, MissingValuesException, InterruptedException {
         /* Generate isAlive Message */
         UnwrappedPayload pl = new UnwrappedPayload();
@@ -260,6 +292,11 @@ public class KVClient {
             InterruptedException,
             MissingValuesException {
         ServerResponse res;
+
+        if(this.socket == null || this.serverAddress == null || this.serverPort == 0)
+        {
+            throw new RuntimeException("Destination not set");
+        }
 
         UnwrappedMessage msg = generateMessage(pl);
         res = sendAndReceiveSingleServerResponse(msg);
@@ -329,7 +366,7 @@ public class KVClient {
         messageOnWire = req;
 
         UnwrappedMessage res = null;
-        while (tries < 5 && !success)
+        while (tries < 4 && !success)
         {
             socket.send(p);
             try {
@@ -358,6 +395,8 @@ public class KVClient {
             crc32.update(rIDnPL.array());
             boolean crc32Match = crc32.getValue() == res.getCheckSum();
 
+            if(!msgIDMatch) continue;
+
             success = msgIDMatch && crc32Match;
             tries++;
             socket.setSoTimeout(socket.getSoTimeout() * 2);
@@ -365,7 +404,7 @@ public class KVClient {
 
         socket.setSoTimeout(initTimeout);
 
-        if(tries == 5 && !success) {
+        if(tries == 4 && !success) {
             throw new ServerTimedOutException();
         }
 

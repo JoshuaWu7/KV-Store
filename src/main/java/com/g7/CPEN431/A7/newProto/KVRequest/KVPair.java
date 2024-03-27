@@ -3,7 +3,14 @@ package com.g7.CPEN431.A7.newProto.KVRequest;
 public class KVPair implements PutPair {
     byte[] key;
     byte[] value;
+    int version = 0;
     public KVPair() {
+    }
+
+    public KVPair(byte[] key, byte[] value, int version) {
+        this.key = key;
+        this.value = value;
+        this.version = version;
     }
 
     @Override
@@ -14,6 +21,21 @@ public class KVPair implements PutPair {
     @Override
     public byte[] getKey() {
         return key;
+    }
+
+    @Override
+    public boolean hasVersion() {
+        return true;
+    }
+
+    @Override
+    public int getVersion() {
+        return version;
+    }
+
+    @Override
+    public void setVersion(int version) {
+        this.version = version;
     }
 
     @Override
@@ -35,4 +57,5 @@ public class KVPair implements PutPair {
     public void setValue(byte[] value) {
         this.value = value;
     }
+
 }

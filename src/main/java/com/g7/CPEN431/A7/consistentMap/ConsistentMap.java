@@ -1,5 +1,9 @@
 package com.g7.CPEN431.A7.consistentMap;
 
+import com.g7.CPEN431.A7.map.KeyWrapper;
+import com.g7.CPEN431.A7.map.ValueWrapper;
+import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -9,10 +13,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.TreeMap;
+import java.time.Instant;
+import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -25,8 +27,12 @@ import static com.g7.CPEN431.A7.KVServer.selfLoopback;
 public class ConsistentMap {
     private final TreeMap<Integer, VNode> ring;
     private final int VNodes;
-    private final ReadWriteLock lock;
+    private final ReentrantReadWriteLock lock;
     private int current = 0;
+    private String serverPathName;
+    private static final int MIN_UPDATE_PERIOD =  5000;
+    Map<ServerRecord, ServerRecord> allRecords;
+
 
     /**
      *
@@ -34,40 +40,36 @@ public class ConsistentMap {
      * @param serverPathName path to txt file containing server IP addresses + port
      * @throws IOException if cannot read txt file.
      */
-    public ConsistentMap(int vNodes, String serverPathName) throws IOException  {
+    public ConsistentMap(int vNodes, String serverPathName) {
         this.ring = new TreeMap<>();
         this.VNodes = vNodes;
         this.lock = new ReentrantReadWriteLock();
+        this.serverPathName = serverPathName;
+        this.allRecords = new HashMap<>();
 
         // Parse the txt file with all servers.
         Path path = Paths.get(serverPathName);
-        List<String> serverList = Files.readAllLines(path , StandardCharsets.UTF_8);
-
-        for(String server : serverList)
-        {
-            String[] serverNPort = server.split(":");
-            InetAddress addr = InetAddress.getByName(serverNPort[0]);
-            int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
-
-            ServerRecord serverRecord = addServerPrivate(addr, port);
-
-            /* only activated during initialization, initializes current ptr */
-            if(serverRecord.equals(self) || serverRecord.equals(selfLoopback))
+        try {
+            List<String> serverList = Files.readAllLines(path , StandardCharsets.UTF_8);
+            for(String server : serverList)
             {
-                this.current = new VNode(self, 0).getHash() + 1;
+                String[] serverNPort = server.split(":");
+                InetAddress addr = InetAddress.getByName(serverNPort[0]);
+                int port = serverNPort.length == 2 ? Integer.parseInt(serverNPort[1]): 13788;
+
+                ServerRecord serverRecord = addServerPrivate(addr, port);
+
+                /* only activated during initialization, initializes current ptr */
+                if(serverRecord.equals(self) || serverRecord.equals(selfLoopback))
+                {
+                    this.current = new VNode(self, 0).getHash() + 1;
+                }
             }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    /**
-     *
-     * @param address IP address of server to add
-     * @param port of the server to add
-     */
-    public void addServer(InetAddress address, int port)
-    {
-        addServerPrivate(address, port);
-    }
 
     /**
      * Do not use this in public, since invariants are broken, leading to concurrency guarantees failing
@@ -78,6 +80,7 @@ public class ConsistentMap {
     private ServerRecord addServerPrivate(InetAddress address, int port)
     {
         ServerRecord newServer = new ServerRecord(address, port);
+        this.allRecords.put(newServer, newServer);
 
         lock.writeLock().lock();
         for(int i = 0; i < VNodes; i++)
@@ -91,40 +94,11 @@ public class ConsistentMap {
     }
 
     /**
-     * Has no effects if server does not exist
-     * @param address IP address of server to remove
-     * @param port of server to remove
-     *
-     */
-    public void removeServer(InetAddress address, int port)
-    {
-        ServerRecord r = new ServerRecord(address, port);
-        removeServer(r);
-    }
-
-    /**
-     * This is now the standard method to remove servers
-     * @param r server record
-     */
-    public void removeServer(ServerRecord r)
-    {
-        lock.writeLock().lock();
-        for(int i = 0; i < VNodes; i++)
-        {
-            int hashcode = new VNode(r, i).getHash();
-            ring.remove(hashcode);
-        }
-        lock.writeLock().unlock();
-    }
-
-    /**
      *
      * @param key - byte array containing the key of the KV pair that will need to be mapped to a server
      * @return A copy of the server
-     * @throws NoServersException If there are no servers in the ring
-     * @throws NoSuchAlgorithmException If MD5 hashing fails
      */
-    public ServerRecord getServer(byte[] key) throws NoServersException, NoSuchAlgorithmException {
+    public ServerRecord getServer(byte[] key) {
         lock.readLock().lock();
         if(ring.isEmpty())
         {
@@ -148,7 +122,7 @@ public class ConsistentMap {
      * @return A random server in the ring.
      * @throws NoServersException - If there are no servers
      */
-    public ServerRecord getRandomServer() throws NoServersException
+    public ServerRecord getRandomServer()
     {
         lock.readLock().lock();
         if(ring.isEmpty())
@@ -195,82 +169,57 @@ public class ConsistentMap {
     }
 
     /**
-     * Sets the corresponding physical server's record time to the current time,
-     * and marks it as alive. If it does not exist, the record will be added.
-     * @param r Server record (can be clone) who's record is to be amended.
+     * Updates the server state (dead or alive) if the record r is newer than the preexisting record.
+     * @param r The new server record
+     * @return true if updated, false if not
      */
-    public void setServerAlive(ServerRecord r) {
-        lock.writeLock().lock();
-        int hashcode = new VNode(r, 0).getHash();
-        VNode vnode = ring.get(hashcode);
-
-        if(vnode == null)
-        {
-            addServer(r.getAddress(), r.getPort());
-        }
-        else
-        {
-            vnode.serverRecord.setLastSeenNow();
-        }
-
-        lock.writeLock().unlock();
-    }
-
-    /**
-     * Sets the corresppnding server as dead. If the server does not exist, there are no side effects.
-     * @param r
-     */
-    public void setServerDeadNow(ServerRecord r)
+    public boolean updateServerState(ServerRecord r)
     {
         lock.writeLock().lock();
-        int hashcode = new VNode(r, 0).getHash();
-        VNode vnode = ring.get(hashcode);
+        ServerRecord actualRecord = allRecords.get(r);
+        boolean updated = false;
 
-        if(vnode != null) {
-            vnode.serverRecord.setLastSeenDeadNow();
-        };
-
-        lock.writeLock().unlock();
-    }
-
-    /**
-     * Sets the server information time. No side effects if server does not exist
-     * @param r - Server record of physical server (can be clone, just match IP and port)
-     * @param informationTime - information time to be set
-     */
-    public void setServerInformationTime(ServerRecord r, long informationTime)
-    {
-        lock.writeLock().lock();
-        int hashcode = new VNode(r, 0).getHash();
-        VNode vnode = ring.get(hashcode);
-
-        if(vnode != null)
+        if(actualRecord == null)
         {
-            vnode.serverRecord.setInformationTime(informationTime);
+            lock.writeLock().unlock();
+            throw new IllegalStateException("All servers not initially added");
         }
 
-        lock.writeLock().unlock();
-    }
-
-    /**
-     * Sets the server status code. No side fx if server does not exist.
-     * @param r - Server record of physical server (can be clone, match ip and port)
-     * @param statusCode new status code to set the server to.
-     */
-    public void setServerStatusCode(ServerRecord r, int statusCode)
-    {
-        lock.writeLock().lock();
-        int hashcode = new VNode(r, 0).getHash();
-        VNode vnode = ring.get(hashcode);
-
-        if(vnode != null)
+        //check the information time
+        if(r.getInformationTime() > actualRecord.getInformationTime())
         {
-            vnode.serverRecord.setCode(statusCode);
+
+            //from alive to dead
+            if(actualRecord.isAlive() && !r.isAlive())
+            {
+                //remove from the ring
+                for(int i = 0; i < VNodes; i++)
+                {
+                    VNode v = new VNode(actualRecord, i);
+                    ring.remove(v.getHash());
+                }
+            }
+            // resurrection
+            else if (!actualRecord.isAlive() && r.isAlive())
+            {
+                for(int i = 0; i < VNodes; i++)
+                {
+                    VNode v = new VNode(actualRecord, i);
+                    ring.put(v.getHash(), v);
+                }
+            }
+            //otherwise, it must be in the same state, thus ring does not need to be changed.
+
+            //sync the code and information time
+            actualRecord.setCode(r.getCode());
+            actualRecord.setInformationTime(r.getInformationTime());
+
+            updated = true;
+            System.out.println(getServerCount());
         }
-
         lock.writeLock().unlock();
+        return updated;
     }
-
 
     /**
      * Helper function to hash any byte array to int
@@ -278,8 +227,13 @@ public class ConsistentMap {
      * @return An integer hash
      * @throws NoSuchAlgorithmException
      */
-    private int getHash(byte[] key) throws NoSuchAlgorithmException {
-        MessageDigest md5 = MessageDigest.getInstance("MD5");
+    private int getHash(byte[] key) {
+        MessageDigest md5;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
         byte[] dig = md5.digest(key);
 
         return (
@@ -302,6 +256,84 @@ public class ConsistentMap {
         boolean hasKey = ring.containsKey(hashcode);
         lock.readLock().unlock();
         return hasKey;
+    }
+
+    /**
+     * Get number of servers in the ring
+     * @return number of servers
+     */
+    public int getServerCount() {
+        int count;
+        lock.readLock().lock();
+        count = ring.size() / VNodes;
+        lock.readLock().unlock();
+        return count;
+    }
+
+    public Collection<ForwardList> getEntriesToBeForwarded(Set<Map.Entry<KeyWrapper, ValueWrapper>> entries)
+    {
+        lock.readLock().lock();
+        if(ring.isEmpty())
+        {
+            lock.readLock().unlock();
+            throw new NoServersException();
+        }
+
+        Map<ServerRecord, ForwardList> m = new HashMap<>();
+
+        entries.forEach((entry) ->
+        {
+            /* normally it is not ok to call our own functions because of the risk of deadlock, but the getServer
+            function only uses the readlock, so it is fine.
+             */
+
+            int hashcode = getHash(entry.getKey().getKey());
+
+            Map.Entry<Integer, VNode> server = ring.ceilingEntry(hashcode);
+            /* Deal with case where the successor of the key is past "0" */
+            server = (server == null) ? ring.firstEntry(): server;
+
+            /* Do not forward keys that belong to myself */
+            if(server.getValue().serverRecord.equals(self) || server.getValue().serverRecord.equals(selfLoopback)) return;
+
+            ServerRecord cloneRecord = server.getValue().getServerRecordClone();
+            m.compute(server.getValue().serverRecord, (key, value) ->
+            {
+                ForwardList forwardList;
+                if(value == null) forwardList = new ForwardList(cloneRecord);
+                else forwardList = value;
+
+                forwardList.addToList(entry);
+
+                return forwardList;
+            });
+        });
+        lock.readLock().unlock();
+        return m.values();
+    }
+
+    public Collection<ServerRecord> getAllRecords()
+    {
+        lock.readLock().lock();
+        Set<ServerRecord> allServers = new HashSet<>();
+        for(VNode vnode : ring.values())
+        {
+            allServers.add(vnode.getServerRecordClone());
+        }
+        lock.readLock().unlock();
+        return allServers;
+    }
+
+    public List<ServerEntry> getFullRecord()
+    {
+        lock.readLock().lock();
+        List<ServerEntry> allServers = new ArrayList<>();
+        for(ServerRecord r: allRecords.values())
+        {
+            allServers.add(new ServerRecord(r));
+        }
+        lock.readLock().unlock();
+        return allServers;
     }
 
     public static class NoServersException extends IllegalStateException {}

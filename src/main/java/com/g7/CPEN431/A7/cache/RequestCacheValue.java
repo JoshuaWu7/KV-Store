@@ -98,10 +98,6 @@ public class RequestCacheValue implements KVResponse {
                 this.value = builder.b_value;
                 break;
             }
-            /* TODO: Add a builder for the case where you send the response to a obituary update (isDead) request
-            * You can use the serverStatusCode class variable
-            *
-             */
             default: throw new IllegalArgumentException();
         }
     }
@@ -158,7 +154,6 @@ public class RequestCacheValue implements KVResponse {
             return this;
         }
 
-        //TODO: Add a set server status code function
         public Builder setServerStatusCodes(List<Integer> statusCodes){
             if(statusCodes == null) throw new IllegalArgumentException();
             this.b_serverStatusCodes = statusCodes;
@@ -296,9 +291,6 @@ public class RequestCacheValue implements KVResponse {
         throw new RuntimeException("Responses are immutable");
     }
 
-    /*
-    TODO: Have a glimpse of these so you know what they are doing.
-     */
     @Override
     public boolean hasServerStatusCode() {
         return this.serverStatusCodes != null;

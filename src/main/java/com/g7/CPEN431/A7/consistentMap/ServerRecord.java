@@ -124,9 +124,16 @@ public class ServerRecord implements ServerEntry {
         setCode(CODE_ALI);
     }
 
-    public void setLastSeenDeadNow()
+    public void setAliveAtTime(long time)
     {
-        setInformationTime(Instant.now().toEpochMilli());
+        setInformationTime(time);
+        setCode(CODE_ALI);
+    }
+
+
+    public void setLastSeenDeadAt(long time)
+    {
+        setInformationTime(time);
         setCode(CODE_DED);
     }
 
@@ -160,6 +167,11 @@ public class ServerRecord implements ServerEntry {
     public void setCode(int code) {
         this.updateCode = code;
         this.updateCodeExists = true;
+    }
+
+    public boolean isAlive()
+    {
+        return this.updateCode == CODE_ALI;
     }
 
     public class HashNotGeneratedException extends Exception {}

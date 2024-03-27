@@ -14,9 +14,11 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.time.Instant;
 import java.util.Timer;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -28,18 +30,17 @@ public class KVServer
 {
     /* Default port, overwritten by cmd line */
     static int PORT = 13788;
-    final static int N_THREADS = 4;
     static final int PACKET_MAX = 16384;
     final static long CACHE_EXPIRY = 1;
-    final static int QUEUE_MAX = 8;
     final static int MEMORY_SAFETY = 2_097_152;
     final static int AVG_KEY_SZ = 32;
-    final static int MAP_ENTRIES = 146_800;
+    static int MAP_SZ;
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
-    final static int GOSSIP_INTERVAL = 500;
-    final static int GOSSIP_WAIT_INIT = 8000;
+    final static int GOSSIP_INTERVAL = 400;
+    final static int GOSSIP_WAIT_INIT = 15_000;
+    public final static int BULKPUT_MAX_SZ = 12000;
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
 
@@ -48,16 +49,23 @@ public class KVServer
     {
         try
         {
+            System.out.println("PID: " + ProcessHandle.current().pid());
 
-           PORT = Integer.parseInt(args[0]);
-           self = new ServerRecord(InetAddress.getLocalHost(), PORT);
-           selfLoopback = new ServerRecord(InetAddress.getLoopbackAddress(), PORT);
+            MAP_SZ = Integer.parseInt(args[1]);
+            int MAP_ENTRIES = MAP_SZ / AVG_VAL_SZ;
+
+
+            int N_THREADS = Integer.parseInt(args[2]);
+
+            PORT = Integer.parseInt(args[0]);
+            self = new ServerRecord(InetAddress.getByAddress(InetAddress.getLocalHost().getAddress()), PORT);
+            selfLoopback = new ServerRecord(InetAddress.getLoopbackAddress(), PORT);
 
 
 
             DatagramSocket server = new DatagramSocket(PORT);
             /* Eliminated in single thread */
-//            ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
+            ExecutorService executor = Executors.newCachedThreadPool();
 
             ConcurrentMap<KeyWrapper, ValueWrapper> map
                     = ChronicleMap
@@ -92,26 +100,26 @@ public class KVServer
             /* Setup pool of byte arrays - single thread implementation only has 1 */
             /* A simpler approach to keeping track of byte arrays*/
             ConcurrentLinkedQueue<byte[]> bytePool = new ConcurrentLinkedQueue<>();
-            for(int i = 0; i < N_THREADS; i++) {
+            for(int i = 0; i < N_THREADS + 2; i++) {
                 bytePool.add(new byte[PACKET_MAX]);
             }
 
             /* Outbound Queue and Thread - eliminated in single thread implementation */
             ConcurrentLinkedQueue<DatagramPacket> outbound = new ConcurrentLinkedQueue<>();
-//            executor.execute(() -> {
-//                while (true) {
-//                    if(!outbound.isEmpty()) {
-//                        try {
-//                            server.send(outbound.poll());
-//                        } catch (IOException e) {
-//                            System.err.println("Failure to send packets");
-//                            throw new RuntimeException(e);
-//                        }
-//                    } else {
-//                        Thread.yield();
-//                    }
-//                }
-//            });
+            executor.execute(() -> {
+                while (true) {
+                    if(!outbound.isEmpty()) {
+                        try {
+                            server.send(outbound.poll());
+                        } catch (IOException e) {
+                            System.err.println("Failure to send packets");
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        Thread.yield();
+                    }
+                }
+            });
 
             /* Set up the list of servers */
             ConsistentMap serverRing = new ConsistentMap(VNODE_COUNT, SERVER_LIST);
@@ -119,9 +127,13 @@ public class KVServer
             /* Set up obituary list */
             ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths = new ConcurrentLinkedQueue();
 
+            /* Set up last update time */
+            AtomicLong lastReqTime = new AtomicLong(Instant.now().toEpochMilli() + GOSSIP_WAIT_INIT + GOSSIP_INTERVAL);
+
             /* set up the timer */
             Timer timer = new Timer();
-            timer.scheduleAtFixedRate(new DeathRegistrar(pendingRecordDeaths, serverRing), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
+            timer.schedule(new DeathRegistrar(pendingRecordDeaths, serverRing, lastReqTime), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
+
 
             while(true){
 
@@ -129,14 +141,14 @@ public class KVServer
                 long remainingMemory  = r.maxMemory() - (r.totalMemory() - r.freeMemory());
                 boolean isOverloaded = remainingMemory < MEMORY_SAFETY;
 
-                while(bytePool.isEmpty()) Thread.yield();
-                byte [] iBuf = bytePool.poll();
+                byte[] iBuf;
+                while((iBuf = bytePool.poll()) == null) Thread.yield();
 
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
                 server.receive(iPacket);
 
                 /* Run it directly instead of via executor service. */
-                new KVServerTaskHandler(
+                executor.execute(new KVServerTaskHandler(
                         iPacket,
                         requestCache,
                         map,
@@ -146,13 +158,15 @@ public class KVServer
                         isOverloaded,
                         outbound,
                         serverRing,
-                        pendingRecordDeaths).run();
+                        pendingRecordDeaths,
+                        executor,
+                        lastReqTime));
 
                 /* Executed here in single thread impl. */
-                while(!outbound.isEmpty())
-                {
-                    server.send(outbound.poll());
-                }
+//                while(!outbound.isEmpty())
+//                {
+//                    server.send(outbound.poll());
+//                }
             }
 
         } catch (SocketException e) {
