@@ -64,6 +64,7 @@ public class KVServerTaskHandler implements Runnable {
     final private boolean isOverloaded;
     final private ConcurrentLinkedQueue<DatagramPacket> outbound;
     final private ConcurrentLinkedQueue<ServerRecord>pendingRecordDeaths;
+    //do not use
     ExecutorService threadPool;
 
     /* Constants */
@@ -731,19 +732,17 @@ public class KVServerTaskHandler implements Runnable {
     // TODO: needs to be changed back to private after testing
     public List<Integer> getDeathCodes(List<ServerEntry> deadServers, ServerRecord us) {
         List<Integer> serverStatusCodes = new ArrayList<>();
-        assert pendingRecordDeaths != null;
         boolean serverRingUpdated = false;
         for (ServerEntry server: deadServers) {
             //verify that the server in the death update is not us
             if (!us.equals(server) && !selfLoopback.equals(server)) {
                 /* retrieve server address and port */
-                boolean updated = serverRing.updateServerState((ServerRecord) server);
-                serverStatusCodes.add(updated ? STAT_CODE_NEW : STAT_CODE_OLD);
+                boolean stateChanged = serverRing.updateServerState((ServerRecord) server);
+                serverStatusCodes.add(stateChanged ? STAT_CODE_NEW : STAT_CODE_OLD);
 
-                if(updated)
+                if(stateChanged)
                 {
                     serverRingUpdated = true;
-                    pendingRecordDeaths.add((ServerRecord) server);
                 }
             }
             //the server update is about us
@@ -753,13 +752,11 @@ public class KVServerTaskHandler implements Runnable {
                     if(self.getInformationTime() > r.getInformationTime() + 10_000)
                     {
                         //do nothing
-                        pendingRecordDeaths.add(self);
                     }
                     else
                     {
                         r.setAliveAtTime(r.getInformationTime() + 10_000);
                         serverRing.updateServerState(r);
-                        pendingRecordDeaths.add(r);
                     }
                     serverStatusCodes.add(STAT_CODE_OLD);
                 } else {

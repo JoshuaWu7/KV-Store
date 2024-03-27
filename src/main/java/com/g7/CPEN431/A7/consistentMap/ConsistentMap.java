@@ -198,6 +198,7 @@ public class ConsistentMap {
                     VNode v = new VNode(actualRecord, i);
                     ring.remove(v.getHash());
                 }
+                updated = true;
             }
             // resurrection
             else if (!actualRecord.isAlive() && r.isAlive())
@@ -207,6 +208,7 @@ public class ConsistentMap {
                     VNode v = new VNode(actualRecord, i);
                     ring.put(v.getHash(), v);
                 }
+                updated = true;
             }
             //otherwise, it must be in the same state, thus ring does not need to be changed.
 
@@ -214,7 +216,6 @@ public class ConsistentMap {
             actualRecord.setCode(r.getCode());
             actualRecord.setInformationTime(r.getInformationTime());
 
-            updated = true;
             System.out.println(getServerCount());
         }
         lock.writeLock().unlock();
