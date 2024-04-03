@@ -36,7 +36,7 @@ public class DeathRegistrar extends TimerTask {
 
 
     long previousPingSendTime;
-    final static int SUSPENDED_THRESHOLD = 20000;
+    final static int SUSPENDED_THRESHOLD = 10000;
     final static int clients = 10;
 
     static
@@ -115,12 +115,12 @@ public class DeathRegistrar extends TimerTask {
             throw new IllegalStateException();
         }
 
-        sender.setDestination(target.getAddress(), target.getServerPort());
+        sender.setDestination(target.getAddress(), target.getServerPort() + 1000);
         //update myself every time I gossip
-        self.setAliveAtTime(System.currentTimeMillis());
+        long start = System.currentTimeMillis();
+        self.setAliveAtTime(start);
         ring.updateServerState(self);
 
-        long start = System.currentTimeMillis();
 
         List<ServerEntry> l = ring.getFullRecord();
         ServerResponse r;
@@ -189,7 +189,7 @@ public class DeathRegistrar extends TimerTask {
 
 
         try {
-            target = ring.getNextServer();
+            target = ring.getRandomServer();
 
             /* omit this round if next server is equal to self */
             if(target.equals(selfLoopback) || target.equals(self) ||
@@ -226,9 +226,6 @@ public class DeathRegistrar extends TimerTask {
      */
     private void checkSelfSuspended() {
         long currentTime = Instant.now().toEpochMilli();
-        long lastreq = lastReqTime.get();
-        if(lastreq > previousPingSendTime) previousPingSendTime = lastreq;
-
 
         previousPingSendTime = previousPingSendTime == -1 ? currentTime : previousPingSendTime;
         if (ring.getServerCount() != 1 && currentTime - previousPingSendTime > GOSSIP_INTERVAL + SUSPENDED_THRESHOLD) {
@@ -238,7 +235,7 @@ public class DeathRegistrar extends TimerTask {
             maplock.writeLock().lock();
             map.clear();
             maplock.writeLock().unlock();
-            ring.resetMap();
+//            ring.resetMap();
             broadcastQueue.clear();
             self.setAliveAtTime(System.currentTimeMillis() + 10_000);
             ring.updateServerState(self);

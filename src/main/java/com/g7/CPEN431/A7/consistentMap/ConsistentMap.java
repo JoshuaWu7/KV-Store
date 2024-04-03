@@ -75,7 +75,7 @@ public class ConsistentMap {
         if (ring.size() > 2 * VNodes)
         {
             ServerRecord curr = allRecordQ.remove();
-            while(curr.equals(self) || curr.equals(selfLoopback))
+            while(!curr.equals(self) && !curr.equals(selfLoopback))
             {
                 allRecordQ.add(curr);
                 curr = allRecordQ.remove();
@@ -159,21 +159,29 @@ public class ConsistentMap {
     public ServerRecord getRandomServer()
     {
         lock.readLock().lock();
-        if(ring.isEmpty())
+        if(ring.size() <= 1)
         {
             lock.readLock().unlock();
             throw new NoServersException();
         }
 
-        int hashcode = new Random().nextInt();
+        Map.Entry<Integer, VNode> server;
 
-        Map.Entry<Integer, VNode> server = ring.ceilingEntry(hashcode);
-        /* Deal with case where the successor of the key is past "0" */
-        server = (server == null) ? ring.firstEntry(): server;
+        do
+        {
+            int hashcode = new Random().nextInt();
 
-        lock.readLock().unlock();
+            server = ring.ceilingEntry(hashcode);
+            /* Deal with case where the successor of the key is past "0" */
+            server = (server == null) ? ring.firstEntry(): server;
+
+            lock.readLock().unlock();
+        }
+        while(server.equals(self) || server == selfLoopback);
+
 
         return server.getValue().getServerRecordClone();
+
     }
 
     /**
@@ -416,7 +424,7 @@ public class ConsistentMap {
         lock.writeLock().lock();
         for(ServerRecord r : allRecords.values())
         {
-            r.setAliveAtTime(-1);
+            r.setInformationTime(-1);
         }
         lock.writeLock().unlock();
     }

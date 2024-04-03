@@ -13,7 +13,6 @@ import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgFactory;
 import com.g7.CPEN431.A7.newProto.KVMsg.KVMsgSerializer;
 import com.g7.CPEN431.A7.newProto.KVRequest.*;
 import com.g7.CPEN431.A7.wrappers.PB_ContentType;
-import com.g7.CPEN431.A7.wrappers.PublicBuffer;
 import com.g7.CPEN431.A7.wrappers.UnwrappedMessage;
 import com.g7.CPEN431.A7.wrappers.UnwrappedPayload;
 import com.google.common.cache.Cache;
@@ -22,6 +21,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.zip.CRC32;
 
 import static com.g7.CPEN431.A7.KVServer.*;
 import static com.g7.CPEN431.A7.cache.ResponseType.*;
@@ -40,6 +41,8 @@ public class KVServerTaskHandler implements Runnable {
     private final AtomicInteger bytesUsed;
     private final DatagramPacket iPacket;
     private final Cache<RequestCacheKey, DatagramPacket> requestCache;
+    private boolean byteArrRet = false;
+
 
     /**
      * This is synchronized. You must obtain the maplock's readlock (See KVServer for full explanation)
@@ -48,14 +51,13 @@ public class KVServerTaskHandler implements Runnable {
     private final ConcurrentMap<KeyWrapper, ValueWrapper> map;
     private final ReadWriteLock mapLock;
     private boolean responseSent = false;
-    private PublicBuffer incomingPublicBuffer;
     private Timer timer;
     /**
      * Consistent map is thread safe. (Internally synchronized with R/W lock)
      */
     private ConsistentMap serverRing;
 
-    final private ConcurrentLinkedQueue<byte[]> bytePool;  //this is thread safe
+    final private BlockingQueue<byte[]> bytePool;  //this is thread safe
     final private boolean isOverloaded;
     final private ConcurrentLinkedQueue<DatagramPacket> outbound;
     final private ConcurrentLinkedQueue<ServerRecord>pendingRecordDeaths;
@@ -115,7 +117,7 @@ public class KVServerTaskHandler implements Runnable {
                                ConcurrentMap<KeyWrapper, ValueWrapper> map,
                                ReadWriteLock mapLock,
                                AtomicInteger bytesUsed,
-                               ConcurrentLinkedQueue<byte[]> bytePool,
+                               BlockingQueue<byte[]> bytePool,
                                boolean isOverloaded,
                                ConcurrentLinkedQueue<DatagramPacket> outbound,
                                ConsistentMap serverRing,
@@ -186,7 +188,8 @@ public class KVServerTaskHandler implements Runnable {
         }
         finally {
             // Return shared objects to the pool
-            bytePool.offer(iPacket.getData());
+            if(!byteArrRet) bytePool.offer(iPacket.getData());
+            byteArrRet = true;
         }
     }
 
@@ -223,7 +226,7 @@ public class KVServerTaskHandler implements Runnable {
 
         UnwrappedPayload payload;
         try {
-            payload = unpackPayload(incomingPublicBuffer);
+            payload = unpackPayload(unwrappedMessage.getPayload());
         } catch (IOException e) {
             System.err.println("Unable to decode payload. Doing nothing");
             return;
@@ -275,8 +278,8 @@ public class KVServerTaskHandler implements Runnable {
                     unwrappedMessage.getCheckSum(),
                     unwrappedMessage.hasSourceAddress() ? InetAddress.getByAddress(unwrappedMessage.getSourceAddress()) : iPacket.getAddress(),
                     unwrappedMessage.hasSourcePort() ? unwrappedMessage.getSourcePort() : iPacket.getPort(),
-                    unwrappedMessage.getMessageID(),
-                    incomingPublicBuffer);
+                    unwrappedMessage.getMessageID()
+            );
         } catch (UnknownHostException e) {
             System.err.println("Could not parse the forwarding address. Doing nothing");
             return;
@@ -285,6 +288,11 @@ public class KVServerTaskHandler implements Runnable {
 
 
         /* Requests here can be handled locally */
+        if(!byteArrRet) bytePool.offer(iPacket.getData());
+        byteArrRet = true;
+
+
+
         DatagramPacket reply;
         try {
             reply = requestCache.get(new RequestCacheKey(unwrappedMessage.getMessageID(), unwrappedMessage.getCheckSum()),
@@ -364,10 +372,7 @@ public class KVServerTaskHandler implements Runnable {
     private UnwrappedMessage unpackPacket(DatagramPacket iPacket)
             throws IOException, InvalidChecksumException {
 
-        incomingPublicBuffer = new PublicBuffer(iPacket.getData(), PB_ContentType.PACKET, iPacket.getLength());
-
-        KVMsg deserialized = KVMsgSerializer.parseFrom(new KVMsgFactory(),
-                incomingPublicBuffer.readPacketFromPB());
+        KVMsg deserialized = KVMsgSerializer.parseFrom(new KVMsgFactory(), iPacket.getData(), 0, iPacket.getLength());
 
         if(!deserialized.hasMessageID() || !deserialized.hasPayload() || !deserialized.hasCheckSum())
         {
@@ -377,14 +382,24 @@ public class KVServerTaskHandler implements Runnable {
         byte[] id = deserialized.getMessageID();
         byte[] pl = deserialized.getPayload();
 
-        incomingPublicBuffer.writeIDToPB().write(id);
-        incomingPublicBuffer.writePayloadToPBAfterID().write(pl);
-
         //verify checksum
-        long actualCRC = incomingPublicBuffer.getCRCFromBody();
+        long actualCRC = getCRC(id, pl);
         if (actualCRC != deserialized.getCheckSum()) throw new InvalidChecksumException();
 
         return (UnwrappedMessage) deserialized;
+    }
+
+    private long getCRC(byte[] id, byte[] payload)
+    {
+        ByteBuffer b = ByteBuffer.allocate(id.length + payload.length);
+        b.put(id);
+        b.put(payload);
+
+        b.flip();
+
+        CRC32 crc32 = new CRC32();
+        crc32.update(b.array());
+        return crc32.getValue();
     }
 
     /**
@@ -393,10 +408,10 @@ public class KVServerTaskHandler implements Runnable {
      * @return The unpacked object
      * @throws IOException If there was a problem unpacking it from the public buffer;
      */
-    private UnwrappedPayload unpackPayload(PublicBuffer payload) throws
+    private UnwrappedPayload unpackPayload(byte[] payload) throws
             IOException{
 
-        KVRequest deserialized = KVRequestSerializer.parseFrom(new KVRequestFactory(), payload.readPayloadFromPBBody());
+        KVRequest deserialized = KVRequestSerializer.parseFrom(new KVRequestFactory(), payload);
         return (UnwrappedPayload) deserialized;
     }
 

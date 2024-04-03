@@ -9,6 +9,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import net.openhft.chronicle.map.ChronicleMap;
 
+import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -40,7 +41,7 @@ public class KVServer
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
-    final static int GOSSIP_INTERVAL = 200;
+    final static int GOSSIP_INTERVAL = 300;
     final static int GOSSIP_WAIT_INIT = 15_000;
     public final static int BULKPUT_MAX_SZ = 12000;
     public static ServerRecord self;
@@ -104,7 +105,7 @@ public class KVServer
 
             /* Setup pool of byte arrays - single thread implementation only has 1 */
             /* A simpler approach to keeping track of byte arrays*/
-            ConcurrentLinkedQueue<byte[]> bytePool = new ConcurrentLinkedQueue<>();
+            BlockingQueue<byte[]> bytePool = new LinkedBlockingQueue<>();
             for(int i = 0; i < N_THREADS + 2; i++) {
                 bytePool.add(new byte[PACKET_MAX]);
             }
@@ -151,6 +152,24 @@ public class KVServer
                     delayedStatusUpdateTimer,
                     executor), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
 
+            //setup the status handler
+            executor.submit(new StatusHandler(
+                    new DatagramSocket(self.getPort() + 1000),
+                    requestCache,
+                    map,
+                    mapLock,
+                    bytesUsed,
+                    bytePool,
+                    false,
+                    outbound,
+                    serverRing,
+                    pendingRecordDeaths,
+                    executor,
+                    lastReqTime,
+                    keyUpdateRequested,
+                    delayedStatusUpdateTimer
+            ));
+
 
             while(true){
 
@@ -158,8 +177,7 @@ public class KVServer
                 long remainingMemory  = r.maxMemory() - (r.totalMemory() - r.freeMemory());
                 boolean isOverloaded = remainingMemory < MEMORY_SAFETY;
 
-                byte[] iBuf;
-                while((iBuf = bytePool.poll()) == null) Thread.yield();
+                byte[] iBuf = bytePool.take();
 
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
                 server.receive(iPacket);
