@@ -36,6 +36,7 @@ public class KVServer
     final static int MEMORY_SAFETY = 2_097_152;
     final static int AVG_KEY_SZ = 32;
     static int MAP_SZ;
+    static int N_THREADS;
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
@@ -45,6 +46,7 @@ public class KVServer
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
     public final static int N_REPLICAS = 2;
+    public final static int INTERNODE_TIMEOUT = 60;
 
 
     public static void main( String[] args )
@@ -57,7 +59,7 @@ public class KVServer
             int MAP_ENTRIES = MAP_SZ / AVG_VAL_SZ;
 
 
-            int N_THREADS = Integer.parseInt(args[2]);
+             N_THREADS = Integer.parseInt(args[2]);
 
             PORT = Integer.parseInt(args[0]);
             self = new ServerRecord(InetAddress.getByAddress(InetAddress.getLocalHost().getAddress()), PORT);

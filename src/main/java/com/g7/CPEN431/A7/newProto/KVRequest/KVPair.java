@@ -1,5 +1,7 @@
 package com.g7.CPEN431.A7.newProto.KVRequest;
 
+import java.util.Arrays;
+
 public class KVPair implements PutPair {
     byte[] key;
     byte[] value;
@@ -58,4 +60,18 @@ public class KVPair implements PutPair {
         this.value = value;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        KVPair kvPair = (KVPair) o;
+
+        return Arrays.equals(key, kvPair.key);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(key);
+    }
 }

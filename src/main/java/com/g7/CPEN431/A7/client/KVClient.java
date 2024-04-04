@@ -30,7 +30,7 @@ public class KVClient {
     int testSequence;
     UnwrappedMessage messageOnWire;
 
-    private final int timeout = 300;
+    private int timeout = 300;
     private int triesMax = 4;
 
     /* Test Result codes */
@@ -72,6 +72,11 @@ public class KVClient {
 
     public KVClient(byte[] publicBuf){
         this.publicBuf = publicBuf;
+    }
+
+    public KVClient(byte[] publicBuf, int timeout) {
+        this.publicBuf = publicBuf;
+        this.timeout = timeout;
     }
 
     public KVClient(InetAddress serverAddress, int serverPort, DatagramSocket socket, byte[] publicBuf, int testSequence) {

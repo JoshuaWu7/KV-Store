@@ -66,13 +66,14 @@ public class KVServerTaskHandler implements Runnable {
     final private ConcurrentLinkedQueue<DatagramPacket> outbound;
     final private ConcurrentLinkedQueue<ServerRecord>pendingRecordDeaths;
     final private AtomicBoolean keyUpdateRequested;
+    final private static BlockingQueue<KVClient> clientPool;
     //do not use
     ExecutorService threadPool;
 
     /* Constants */
     public final static int KEY_MAX_LEN = 32;
     public final static int VALUE_MAX_LEN = 10_000;
-    public final static int CACHE_OVL_WAIT_TIME = 80;   // Temporarily unused since cache doesn't overflow
+    public final static int CACHE_OVL_WAIT_TIME = 1000;   // Temporarily unused since cache doesn't overflow
     public final static int THREAD_OVL_WAIT_TIME = 80;
 
     /* Response Codes */
@@ -105,6 +106,15 @@ public class KVServerTaskHandler implements Runnable {
     public final static int STAT_CODE_OLD = 0x01;
     public final static int STAT_CODE_NEW = 0x02;
 
+
+    static
+    {
+        clientPool = new LinkedBlockingQueue();
+        for(int i = 0; i < N_REPLICAS * N_THREADS; i++)
+        {
+            clientPool.add(new KVClient(new byte[16384], INTERNODE_TIMEOUT));
+        }
+    }
 
     public KVServerTaskHandler(DatagramPacket iPacket,
                                Cache<RequestCacheKey, DatagramPacket> requestCache,
@@ -521,7 +531,6 @@ public class KVServerTaskHandler implements Runnable {
             return generateAndSend(res);
         }
 
-
         if(bytesUsed.get() >= MAP_SZ) {
             RequestCacheValue res = scaf.setResponseType(NO_MEM).build();
             //TODO UNSAFE, but shitty client so whatever...
@@ -529,6 +538,14 @@ public class KVServerTaskHandler implements Runnable {
             map.clear();
             bytesUsed.set(0);
             mapLock.writeLock().unlock();
+            return generateAndSend(res);
+        }
+
+        boolean forwardOK = true;//forwardToReplica(payload);
+
+        if(!forwardOK)
+        {
+            RequestCacheValue res = scaf.setResponseType(OVERLOAD_CACHE).build();
             return generateAndSend(res);
         }
 
@@ -546,6 +563,93 @@ public class KVServerTaskHandler implements Runnable {
         mapLock.readLock().unlock();
 
         return pkt.get();
+    }
+
+    private boolean forwardToReplica (UnwrappedPayload payload)
+    {
+
+        KVPair pair;
+
+        //handle different callees
+        if(payload.getCommand() == REQ_CODE_PUT)
+        {
+            assert payload.hasKey();
+            assert payload.hasValue();
+            pair = new KVPair(payload.getKey(), payload.getValue(), payload.getVersion());
+        }
+        else if (payload.getCommand() == REQ_CODE_DEL)
+        {
+            assert payload.hasKey();
+            //null -> delete.
+            pair = new KVPair(payload.getKey(), null, payload.getVersion());
+        }
+        else
+        {
+            throw new IllegalStateException("Function called by some idiot where it is not supposed to be");
+        }
+
+
+
+        //get replicas
+        List<ServerRecord> replicas = serverRing.getReplicas(payload.getKey());
+        //remove myself
+        replicas.remove(0);
+
+        //set up services for outbound requests w/ different threads.
+        ExecutorCompletionService<RawPutHandler.RESULT> ecs = new ExecutorCompletionService<>(threadPool);
+        List<KVClient> borrowed = new ArrayList<>();
+
+        //for each replica - create a task and submit to thread pool.
+        for(ServerRecord server : replicas)
+        {
+            ForwardList fl = new ForwardList(server);
+            fl.addToList(pair);
+            KVClient cl;
+
+            try {
+                cl = clientPool.take();
+                borrowed.add(cl);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            ecs.submit(new RawPutHandler(fl, cl));
+        }
+
+        //join all the threads to get result.
+        for(int i = 0; i < N_REPLICAS - 1; i++)
+        {
+            Future<RawPutHandler.RESULT> result;
+            List<RawPutHandler.STATUS> statuses;
+            int port = 0;
+            try {
+                result = ecs.take();
+                statuses = result.get().s;
+                port = result.get().l.getDestination().getPort();
+            }
+            catch (InterruptedException | ExecutionException e) {
+                mapLock.readLock().unlock();
+                System.err.println("Exception while sending to " + port);
+                clientPool.addAll(borrowed);
+                throw new RuntimeException(e);
+            }
+
+            for(RawPutHandler.STATUS status : statuses)
+            {
+                //return internal error if replicas cannot be reached
+                if(status != RawPutHandler.STATUS.OK)
+                {
+                    System.err.println("failed to reach successors at port: " + port);
+                    //no need to send packet here, it will be done when we return false
+                    //no change in bytes used. existing value kept.
+                    clientPool.addAll(borrowed);
+                    return false;
+                }
+            }
+        }
+
+        clientPool.addAll(borrowed);
+        return true;
     }
 
     /**
@@ -788,8 +892,8 @@ public class KVServerTaskHandler implements Runnable {
      */
 
     private void transferKeys() {
+        new Timer().schedule(new KeyTransferHandler(mapLock, map, bytesUsed, serverRing, pendingRecordDeaths, keyUpdateRequested), 15_000);
 
-        threadPool.submit(new KeyTransferHandler(mapLock, map, bytesUsed, serverRing, pendingRecordDeaths));
     }
 
     // Custom Exceptions
