@@ -30,6 +30,7 @@ import java.time.Instant;
 import java.util.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -64,6 +65,7 @@ public class KVServerTaskHandler implements Runnable {
     final private boolean isOverloaded;
     final private ConcurrentLinkedQueue<DatagramPacket> outbound;
     final private ConcurrentLinkedQueue<ServerRecord>pendingRecordDeaths;
+    final private AtomicBoolean keyUpdateRequested;
     //do not use
     ExecutorService threadPool;
 
@@ -115,7 +117,8 @@ public class KVServerTaskHandler implements Runnable {
                                ConsistentMap serverRing,
                                ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths,
                                ExecutorService threadPool,
-                               AtomicLong lastReqTime) {
+                               AtomicLong lastReqTime,
+                               AtomicBoolean keyUpdateRequested) {
         this.iPacket = iPacket;
         this.requestCache = requestCache;
         this.map = map;
@@ -128,6 +131,7 @@ public class KVServerTaskHandler implements Runnable {
         this.pendingRecordDeaths = pendingRecordDeaths;
         this.threadPool = threadPool;
         this.lastReqTime = lastReqTime;
+        this.keyUpdateRequested = keyUpdateRequested;
 
     }
 
@@ -144,6 +148,7 @@ public class KVServerTaskHandler implements Runnable {
         this.serverRing = serverRing;
         this.pendingRecordDeaths = pendingRecordDeaths;
         this.lastReqTime = new AtomicLong();
+        this.keyUpdateRequested = null;
     }
 
     // empty constructor for testing BulkPutTest
@@ -159,6 +164,7 @@ public class KVServerTaskHandler implements Runnable {
         this.serverRing = null;
         this.pendingRecordDeaths = null;
         this.lastReqTime = new AtomicLong();
+        this.keyUpdateRequested = null;
     }
 
 
@@ -223,9 +229,9 @@ public class KVServerTaskHandler implements Runnable {
             if(payload.hasKey())
             {
                 byte[] key = payload.getKey();
-                ServerRecord destination = serverRing.getServer(key);
+                ServerRecord destination = serverRing.getReplicas(key).get(0);
 
-                if((!destination.equals(self)) && (!destination.equals(selfLoopback)))
+                if(serverRing.getRtype(key) != ConsistentMap.RTYPE.PRI)
                 {
                     // Set source so packet will be sent to correct sender.
                     unwrappedMessage.setSourceAddress(iPacket.getAddress());
@@ -767,7 +773,8 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         /* Key transfer after ring state is up-to-date */
-        if(serverRingUpdated)
+        boolean willUpdate = keyUpdateRequested.compareAndSet(false, true);
+        if(serverRingUpdated && willUpdate)
         {
             transferKeys();
         }
@@ -781,6 +788,7 @@ public class KVServerTaskHandler implements Runnable {
      */
 
     private void transferKeys() {
+
         threadPool.submit(new KeyTransferHandler(mapLock, map, bytesUsed, serverRing, pendingRecordDeaths));
     }
 

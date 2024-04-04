@@ -7,12 +7,11 @@ import com.g7.CPEN431.A7.consistentMap.ForwardList;
 import com.g7.CPEN431.A7.consistentMap.ServerRecord;
 import com.g7.CPEN431.A7.map.KeyWrapper;
 import com.g7.CPEN431.A7.map.ValueWrapper;
+import com.g7.CPEN431.A7.newProto.KVRequest.KVPair;
 import com.g7.CPEN431.A7.newProto.KVRequest.PutPair;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -61,6 +60,7 @@ public class KeyTransferHandler implements Runnable {
 
         byte[] byteArr = new byte[16384];
         KVClient sender = new KVClient(byteArr);
+        Set<KVPair> toDelete = new HashSet<>();
 
         toBeForwarded.forEach((forwardList -> {
             ServerRecord target = forwardList.getDestination();
@@ -84,6 +84,7 @@ public class KeyTransferHandler implements Runnable {
                     }
                     //add to the buffer.
                     temp.add(pair);
+                    if(serverRing.getRtype(pair.getKey()) == ConsistentMap.RTYPE.UNR) toDelete.add((KVPair) pair);
                     currPacketSize += pairLen;
 
                 }

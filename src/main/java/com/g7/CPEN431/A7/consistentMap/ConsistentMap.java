@@ -1,5 +1,6 @@
 package com.g7.CPEN431.A7.consistentMap;
 
+import com.g7.CPEN431.A7.KVServer;
 import com.g7.CPEN431.A7.map.KeyWrapper;
 import com.g7.CPEN431.A7.map.ValueWrapper;
 import com.g7.CPEN431.A7.newProto.KVRequest.ServerEntry;
@@ -18,8 +19,7 @@ import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static com.g7.CPEN431.A7.KVServer.self;
-import static com.g7.CPEN431.A7.KVServer.selfLoopback;
+import static com.g7.CPEN431.A7.KVServer.*;
 
 /**
  * A map API for a consistent hashing scheme.
@@ -117,11 +117,29 @@ public class ConsistentMap {
         return server.getValue().getServerRecordClone();
     }
 
-    /**
-     *
-     * @return A random server in the ring.
-     * @throws NoServersException - If there are no servers
-     */
+    public VNode getVnode(int hashcode) {
+        lock.readLock().lock();
+        if(ring.isEmpty())
+        {
+            lock.readLock().unlock();
+            throw new NoServersException();
+        }
+
+
+        Map.Entry<Integer, VNode> server = ring.ceilingEntry(hashcode);
+        /* Deal with case where the successor of the key is past "0" */
+        server = (server == null) ? ring.firstEntry(): server;
+
+        lock.readLock().unlock();
+
+        return server.getValue();
+    }
+
+        /**
+         *
+         * @return A random server in the ring.
+         * @throws NoServersException - If there are no servers
+         */
     public ServerRecord getRandomServer()
     {
         lock.readLock().lock();
@@ -287,18 +305,13 @@ public class ConsistentMap {
             /* normally it is not ok to call our own functions because of the risk of deadlock, but the getServer
             function only uses the readlock, so it is fine.
              */
+            byte[] k = entry.getKey().getKey();
 
-            int hashcode = getHash(entry.getKey().getKey());
+            if(getRtype(k) == RTYPE.PRI) return;
 
-            Map.Entry<Integer, VNode> server = ring.ceilingEntry(hashcode);
-            /* Deal with case where the successor of the key is past "0" */
-            server = (server == null) ? ring.firstEntry(): server;
+            ServerRecord cloneRecord = new ServerRecord(getReplicas(k).get(0));
 
-            /* Do not forward keys that belong to myself */
-            if(server.getValue().serverRecord.equals(self) || server.getValue().serverRecord.equals(selfLoopback)) return;
-
-            ServerRecord cloneRecord = server.getValue().getServerRecordClone();
-            m.compute(server.getValue().serverRecord, (key, value) ->
+            m.compute(cloneRecord, (key, value) ->
             {
                 ForwardList forwardList;
                 if(value == null) forwardList = new ForwardList(cloneRecord);
@@ -335,6 +348,42 @@ public class ConsistentMap {
         }
         lock.readLock().unlock();
         return allServers;
+    }
+
+    public List<ServerRecord> getReplicas(byte[] key)
+    {
+        lock.readLock().lock();
+        assert ring.size() >= N_REPLICAS * VNodes;
+
+        List<ServerRecord> replicas = new ArrayList<>();
+
+        int hash = getHash(key);
+        VNode curr = getVnode(hash);
+        replicas.add(curr.getServerRecordClone());
+        hash = curr.hash + 1;
+
+
+        for(int i = 1; i < N_REPLICAS; i++)
+        {
+            do
+            {
+                curr = getVnode(hash);
+                hash = curr.hash + 1;
+            } while(replicas.contains(curr.serverRecord));
+            replicas.add(curr.getServerRecordClone());
+        }
+
+        lock.readLock().unlock();
+
+        return replicas;
+    }
+
+    public RTYPE getRtype(byte[] key)
+    {
+        List<ServerRecord> replicas = getReplicas(key);
+        if(replicas.get(0).equals(self) || replicas.get(0).equals(selfLoopback)) return RTYPE.PRI;
+        else if (replicas.contains(self) || replicas.contains(selfLoopback)) return RTYPE.BAC;
+        else return RTYPE.UNR;
     }
 
     public static class NoServersException extends IllegalStateException {}
@@ -418,8 +467,12 @@ public class ConsistentMap {
                             (dig[0] & 0xFF)
             );
         }
-
-}
-
+    }
+    public static enum RTYPE
+    {
+        PRI,
+        BAC,
+        UNR
+    }
 }
 

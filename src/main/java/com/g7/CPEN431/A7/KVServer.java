@@ -17,6 +17,7 @@ import java.net.SocketException;
 import java.time.Instant;
 import java.util.Timer;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -43,6 +44,7 @@ public class KVServer
     public final static int BULKPUT_MAX_SZ = 12000;
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
+    public final static int N_REPLICAS = 2;
 
 
     public static void main( String[] args )
@@ -104,6 +106,8 @@ public class KVServer
                 bytePool.add(new byte[PACKET_MAX]);
             }
 
+            AtomicBoolean keyUpdateRequested = new AtomicBoolean();
+
             /* Outbound Queue and Thread - eliminated in single thread implementation */
             ConcurrentLinkedQueue<DatagramPacket> outbound = new ConcurrentLinkedQueue<>();
             executor.execute(() -> {
@@ -160,7 +164,9 @@ public class KVServer
                         serverRing,
                         pendingRecordDeaths,
                         executor,
-                        lastReqTime));
+                        lastReqTime,
+                        keyUpdateRequested
+                        ));
 
                 /* Executed here in single thread impl. */
 //                while(!outbound.isEmpty())
