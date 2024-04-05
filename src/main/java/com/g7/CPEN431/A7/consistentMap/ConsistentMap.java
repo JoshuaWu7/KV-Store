@@ -72,14 +72,17 @@ public class ConsistentMap {
         }
 
         //shuffle the thing around until i'm at the front
-        ServerRecord curr = allRecordQ.remove();
-        while(curr.equals(self) || curr.equals(selfLoopback))
+        if (ring.size() > 2 * VNodes)
         {
-            allRecordQ.add(curr);
-            curr = allRecordQ.remove();
-        }
+            ServerRecord curr = allRecordQ.remove();
+            while(!curr.equals(self) || !curr.equals(selfLoopback))
+            {
+                allRecordQ.add(curr);
+                curr = allRecordQ.remove();
+            }
 
-        allRecordQ.add(curr);
+            allRecordQ.add(curr);
+        }
     }
 
 
