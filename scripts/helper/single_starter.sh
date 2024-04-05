@@ -5,6 +5,7 @@ START_PORT=43100
 END_PORT=$(($START_PORT + $SERVER_COUNT - 1))
 N_THREADS=16
 MEM_MAX=60817408
+N_REPLICAS=1
 
 cd testjar
 
@@ -29,6 +30,7 @@ do
   $i \
   $MEM_MAX \
   $N_THREADS \
+  $N_REPLICAS \
   >serverlog.log 2>&1 </dev/null&
 
 done

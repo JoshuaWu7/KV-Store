@@ -5,6 +5,7 @@ START_PORT=$2
 END_PORT=$(($START_PORT + $SERVER_COUNT - 1))
 N_THREADS=16
 MEM_MAX=486539264
+N_REPLICAS=4
 
 cd serverjar
 
@@ -30,6 +31,7 @@ do
   $i \
   $MEM_MAX \
   $N_THREADS \
+  $N_REPLICAS \
   &
 done
 echo "Server creation complete"

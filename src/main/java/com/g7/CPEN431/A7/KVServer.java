@@ -45,7 +45,7 @@ public class KVServer
     public final static int BULKPUT_MAX_SZ = 12000;
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
-    public final static int N_REPLICAS = 4;
+    public static int N_REPLICAS = 4;
     public final static int INTERNODE_TIMEOUT = 60;
 
 
@@ -60,6 +60,7 @@ public class KVServer
 
 
              N_THREADS = Integer.parseInt(args[2]);
+             N_REPLICAS = Integer.parseInt(args[3]);
 
             PORT = Integer.parseInt(args[0]);
             self = new ServerRecord(InetAddress.getByAddress(InetAddress.getLocalHost().getAddress()), PORT);
