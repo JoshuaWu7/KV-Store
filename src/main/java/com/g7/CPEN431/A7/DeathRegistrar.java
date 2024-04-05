@@ -106,7 +106,6 @@ public class DeathRegistrar extends TimerTask {
         try {
             target = ring.getNextServer();
         } catch (ConsistentMap.NoServersException e) {
-            System.err.println("no servers to gossip with");
             return;
         }
 
