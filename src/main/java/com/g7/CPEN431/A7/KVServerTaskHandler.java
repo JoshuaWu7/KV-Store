@@ -2,9 +2,7 @@ package com.g7.CPEN431.A7;
 
 import com.g7.CPEN431.A7.cache.RequestCacheKey;
 import com.g7.CPEN431.A7.cache.RequestCacheValue;
-import com.g7.CPEN431.A7.cache.ResponseType;
 import com.g7.CPEN431.A7.client.KVClient;
-import com.g7.CPEN431.A7.client.ServerResponse;
 import com.g7.CPEN431.A7.consistentMap.ConsistentMap;
 import com.g7.CPEN431.A7.consistentMap.ForwardList;
 import com.g7.CPEN431.A7.consistentMap.ServerRecord;
@@ -22,15 +20,11 @@ import com.google.common.cache.Cache;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.*;
-import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,7 +32,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 
 import static com.g7.CPEN431.A7.KVServer.*;
 import static com.g7.CPEN431.A7.cache.ResponseType.*;
-import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_ALI;
 import static com.g7.CPEN431.A7.consistentMap.ServerRecord.CODE_DED;
 
 public class KVServerTaskHandler implements Runnable {
@@ -56,6 +49,7 @@ public class KVServerTaskHandler implements Runnable {
     private final ReadWriteLock mapLock;
     private boolean responseSent = false;
     private PublicBuffer incomingPublicBuffer;
+    private Timer timer;
     /**
      * Consistent map is thread safe. (Internally synchronized with R/W lock)
      */
@@ -65,7 +59,7 @@ public class KVServerTaskHandler implements Runnable {
     final private boolean isOverloaded;
     final private ConcurrentLinkedQueue<DatagramPacket> outbound;
     final private ConcurrentLinkedQueue<ServerRecord>pendingRecordDeaths;
-    final private AtomicBoolean keyUpdateRequested;
+    final private Semaphore keyUpdateRequested;
     final private static BlockingQueue<KVClient> clientPool;
     //do not use
     ExecutorService threadPool;
@@ -128,7 +122,8 @@ public class KVServerTaskHandler implements Runnable {
                                ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths,
                                ExecutorService threadPool,
                                AtomicLong lastReqTime,
-                               AtomicBoolean keyUpdateRequested) {
+                               Semaphore keyUpdateRequested,
+                               Timer timer) {
         this.iPacket = iPacket;
         this.requestCache = requestCache;
         this.map = map;
@@ -142,6 +137,7 @@ public class KVServerTaskHandler implements Runnable {
         this.threadPool = threadPool;
         this.lastReqTime = lastReqTime;
         this.keyUpdateRequested = keyUpdateRequested;
+        this.timer = timer;
 
     }
 
@@ -243,6 +239,11 @@ public class KVServerTaskHandler implements Runnable {
 
                 if(serverRing.getRtype(key) != ConsistentMap.RTYPE.PRI)
                 {
+                    if(unwrappedMessage.hasSourceAddress())
+                    {
+                        System.err.println("loop, from " + unwrappedMessage.getSourcePort());
+                        throw new IllegalStateException();
+                    }
                     // Set source so packet will be sent to correct sender.
                     unwrappedMessage.setSourceAddress(iPacket.getAddress());
                     unwrappedMessage.setSourcePort(iPacket.getPort());
@@ -541,10 +542,12 @@ public class KVServerTaskHandler implements Runnable {
             return generateAndSend(res);
         }
 
-        boolean forwardOK = true;//forwardToReplica(payload);
+//        boolean forwardOK = true;//forwardToReplica(payload);
+        boolean forwardOK = forwardToReplica(payload);
 
         if(!forwardOK)
         {
+            System.out.println("unable to forward");
             RequestCacheValue res = scaf.setResponseType(OVERLOAD_CACHE).build();
             return generateAndSend(res);
         }
@@ -567,7 +570,6 @@ public class KVServerTaskHandler implements Runnable {
 
     private boolean forwardToReplica (UnwrappedPayload payload)
     {
-
         KVPair pair;
 
         //handle different callees
@@ -877,8 +879,7 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         /* Key transfer after ring state is up-to-date */
-        boolean willUpdate = keyUpdateRequested.compareAndSet(false, true);
-        if(serverRingUpdated && willUpdate)
+        if(serverRingUpdated && keyUpdateRequested.tryAcquire())
         {
             transferKeys();
         }
@@ -892,7 +893,7 @@ public class KVServerTaskHandler implements Runnable {
      */
 
     private void transferKeys() {
-        new Timer().schedule(new KeyTransferHandler(mapLock, map, bytesUsed, serverRing, pendingRecordDeaths, keyUpdateRequested), 15_000);
+         timer.schedule(new KeyTransferHandler(mapLock, map, bytesUsed, serverRing, pendingRecordDeaths, keyUpdateRequested), 15_000);
 
     }
 

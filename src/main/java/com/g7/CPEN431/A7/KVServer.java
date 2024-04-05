@@ -40,7 +40,7 @@ public class KVServer
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
-    final static int GOSSIP_INTERVAL = 400;
+    final static int GOSSIP_INTERVAL = 200;
     final static int GOSSIP_WAIT_INIT = 15_000;
     public final static int BULKPUT_MAX_SZ = 12000;
     public static ServerRecord self;
@@ -108,7 +108,7 @@ public class KVServer
                 bytePool.add(new byte[PACKET_MAX]);
             }
 
-            AtomicBoolean keyUpdateRequested = new AtomicBoolean();
+            Semaphore keyUpdateRequested = new Semaphore(1);
 
             /* Outbound Queue and Thread - eliminated in single thread implementation */
             ConcurrentLinkedQueue<DatagramPacket> outbound = new ConcurrentLinkedQueue<>();
@@ -136,9 +136,11 @@ public class KVServer
             /* Set up last update time */
             AtomicLong lastReqTime = new AtomicLong(Instant.now().toEpochMilli() + GOSSIP_WAIT_INIT + GOSSIP_INTERVAL);
 
-            /* set up the timer */
-            Timer timer = new Timer();
-            timer.schedule(new DeathRegistrar(pendingRecordDeaths, serverRing, lastReqTime), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
+            /* set up the delayedStatusUpdateTimer */
+
+            Timer deathRegistrarTimer = new Timer();
+            Timer delayedStatusUpdateTimer = new Timer();
+            deathRegistrarTimer.schedule(new DeathRegistrar(pendingRecordDeaths, serverRing, lastReqTime, map, mapLock, keyUpdateRequested, bytesUsed, delayedStatusUpdateTimer), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
 
 
             while(true){
@@ -167,7 +169,8 @@ public class KVServer
                         pendingRecordDeaths,
                         executor,
                         lastReqTime,
-                        keyUpdateRequested
+                        keyUpdateRequested,
+                        delayedStatusUpdateTimer
                         ));
 
                 /* Executed here in single thread impl. */

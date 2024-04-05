@@ -16,6 +16,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -32,6 +33,7 @@ public class ConsistentMap {
     private String serverPathName;
     private static final int MIN_UPDATE_PERIOD =  5000;
     Map<ServerRecord, ServerRecord> allRecords;
+    ConcurrentLinkedQueue<ServerRecord> allRecordQ = new ConcurrentLinkedQueue<>();
 
 
     /**
@@ -68,6 +70,16 @@ public class ConsistentMap {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        //shuffle the thing around until i'm at the front
+        ServerRecord curr = allRecordQ.remove();
+        while(curr.equals(self) || curr.equals(selfLoopback))
+        {
+            allRecordQ.add(curr);
+            curr = allRecordQ.remove();
+        }
+
+        allRecordQ.add(curr);
     }
 
 
@@ -81,6 +93,7 @@ public class ConsistentMap {
     {
         ServerRecord newServer = new ServerRecord(address, port);
         this.allRecords.put(newServer, newServer);
+        allRecordQ.add(newServer);
 
         lock.writeLock().lock();
         for(int i = 0; i < VNodes; i++)
@@ -166,24 +179,24 @@ public class ConsistentMap {
      * @throws NoServersException If there are no servers in the ring
      */
     public ServerRecord getNextServer() throws NoServersException {
-        lock.readLock().lock();
-        if(ring.isEmpty())
+        assert ring.size() > VNodes;
+        lock.readLock().lock();;
+        ServerRecord next;
+        for(int i = 0; i < allRecordQ.size(); i++)
         {
-            lock.readLock().unlock();
-            throw new NoServersException();
+            next = allRecordQ.remove();
+            allRecordQ.add(next);
+            if(!next.equals(self) && !next.equals(selfLoopback) && next.isAlive())
+            {
+                //return the item
+                lock.readLock().unlock();
+                return new ServerRecord(next);
+            }
         }
-
-
-        Map.Entry<Integer, VNode> server = ring.ceilingEntry(current);
-        /* Deal with case where the successor of the key is past "0" */
-        server = (server == null) ? ring.firstEntry(): server;
-
-        /* Set the ptr so that next ceiling entry will be the following node in the ring */
-        current = server.getKey() + 1;
 
         lock.readLock().unlock();
 
-        return server.getValue().getServerRecordClone();
+        throw new RuntimeException();
     }
 
     /**
@@ -217,6 +230,7 @@ public class ConsistentMap {
                     ring.remove(v.getHash());
                 }
                 updated = true;
+                System.out.println("from" + self.getPort() + " " + getServerCount());
             }
             // resurrection
             else if (!actualRecord.isAlive() && r.isAlive())
@@ -227,6 +241,7 @@ public class ConsistentMap {
                     ring.put(v.getHash(), v);
                 }
                 updated = true;
+                System.out.println("from" + self.getPort() + " " + getServerCount());
             }
             //otherwise, it must be in the same state, thus ring does not need to be changed.
 
@@ -234,7 +249,6 @@ public class ConsistentMap {
             actualRecord.setCode(r.getCode());
             actualRecord.setInformationTime(r.getInformationTime());
 
-            System.out.println(getServerCount());
         }
         lock.writeLock().unlock();
         return updated;
@@ -306,21 +320,24 @@ public class ConsistentMap {
             function only uses the readlock, so it is fine.
              */
             byte[] k = entry.getKey().getKey();
+            List<ServerRecord> getReplicas = getReplicas(k);
 
-            if(getRtype(k) == RTYPE.PRI) return;
+            getReplicas.remove(self);
+            getReplicas.remove(selfLoopback);
 
-            ServerRecord cloneRecord = new ServerRecord(getReplicas(k).get(0));
-
-            m.compute(cloneRecord, (key, value) ->
+            for(ServerRecord s : getReplicas)
             {
-                ForwardList forwardList;
-                if(value == null) forwardList = new ForwardList(cloneRecord);
-                else forwardList = value;
+                m.compute(s, (key, value) ->
+                {
+                    ForwardList forwardList;
+                    if(value == null) forwardList = new ForwardList(s);
+                    else forwardList = value;
 
-                forwardList.addToList(entry);
+                    forwardList.addToList(entry);
 
-                return forwardList;
-            });
+                    return forwardList;
+                });
+            }
         });
         lock.readLock().unlock();
         return m.values();
@@ -384,6 +401,16 @@ public class ConsistentMap {
         if(replicas.get(0).equals(self) || replicas.get(0).equals(selfLoopback)) return RTYPE.PRI;
         else if (replicas.contains(self) || replicas.contains(selfLoopback)) return RTYPE.BAC;
         else return RTYPE.UNR;
+    }
+
+    public void resetMap()
+    {
+        lock.writeLock().lock();
+        for(ServerRecord r : allRecords.values())
+        {
+            r.setAliveAtTime(-1);
+        }
+        lock.writeLock().unlock();
     }
 
     public static class NoServersException extends IllegalStateException {}

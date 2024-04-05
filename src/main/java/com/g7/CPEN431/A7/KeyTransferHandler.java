@@ -14,11 +14,12 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 
 import static com.g7.CPEN431.A7.KVServer.BULKPUT_MAX_SZ;
+import static com.g7.CPEN431.A7.KVServer.self;
 
 public class KeyTransferHandler  extends TimerTask{
     ReadWriteLock mapLock;
@@ -26,13 +27,13 @@ public class KeyTransferHandler  extends TimerTask{
     AtomicInteger bytesUsed;
     ConsistentMap serverRing;
     ConcurrentLinkedQueue pendingRecordDeaths;
-    AtomicBoolean pendingUpdate;
+    Semaphore pendingUpdate;
 
     public KeyTransferHandler(ReadWriteLock mapLock,
                               ConcurrentMap<KeyWrapper, ValueWrapper> map,
                               AtomicInteger bytesUsed, ConsistentMap serverRing,
                               ConcurrentLinkedQueue pendingRecordDeaths,
-                              AtomicBoolean pendingUpdate) {
+                              Semaphore pendingUpdate) {
         this.mapLock = mapLock;
         this.map = map;
         this.bytesUsed = bytesUsed;
@@ -48,11 +49,12 @@ public class KeyTransferHandler  extends TimerTask{
 
 
     private void transferKeys() {
+        System.out.println("Starting key transfer. @" + self.getPort());
 
         mapLock.writeLock().lock();
 
         Collection<ForwardList> toBeForwarded = serverRing.getEntriesToBeForwarded(this.map.entrySet());
-        boolean updateDone = pendingUpdate.compareAndSet(true, false);
+        pendingUpdate.release();
 
         mapLock.writeLock().unlock();
 
