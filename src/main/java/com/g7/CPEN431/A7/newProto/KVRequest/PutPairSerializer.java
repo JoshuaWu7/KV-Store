@@ -19,6 +19,9 @@ public final class PutPairSerializer {
    if (message.hasVersion()) {
     totalSize += ProtobufOutputStream.computeInt32Size(302, message.getVersion());
    }
+   if (message.hasInsertionTime()) {
+    totalSize += ProtobufOutputStream.computeUint64Size(303, message.getInsertionTime());
+   }
    final byte[] result = new byte[totalSize];
    int position = 0;
    if (message.hasKey()) {
@@ -29,6 +32,9 @@ public final class PutPairSerializer {
    }
    if (message.hasVersion()) {
     position = ProtobufOutputStream.writeInt32(302, message.getVersion(), result, position);
+   }
+   if (message.hasInsertionTime()) {
+    position = ProtobufOutputStream.writeUint64(303, message.getInsertionTime(), result, position);
    }
    ProtobufOutputStream.checkNoSpaceLeft(result, position);
    return result;
@@ -47,6 +53,9 @@ public final class PutPairSerializer {
    }
    if (message.hasVersion()) {
     ProtobufOutputStream.writeInt32(302, message.getVersion(), os);
+   }
+   if (message.hasInsertionTime()) {
+    ProtobufOutputStream.writeUint64(303, message.getInsertionTime(), os);
    }
   } catch (java.io.IOException e) {
    throw new RuntimeException("Serializing to a byte array threw an IOException (should never happen).", e);
@@ -87,6 +96,9 @@ public final class PutPairSerializer {
      break;
     case 302:
      message.setVersion(ProtobufInputStream.readInt32(data,cursor));
+     break;
+    case 303:
+     message.setInsertionTime(ProtobufInputStream.readUint64(data,cursor));
      break;
    }
   }
@@ -130,6 +142,9 @@ public final class PutPairSerializer {
     case 302:
      message.setVersion(ProtobufInputStream.readInt32(is,cursor));
      break;
+    case 303:
+     message.setInsertionTime(ProtobufInputStream.readUint64(is,cursor));
+     break;
    }
   }
  }
@@ -137,11 +152,11 @@ public final class PutPairSerializer {
   if( !message.hasKey()) {
    throw new IllegalArgumentException("Required field not initialized: key");
   }
-  if( !message.hasValue()) {
-   throw new IllegalArgumentException("Required field not initialized: value");
-  }
   if( !message.hasVersion()) {
    throw new IllegalArgumentException("Required field not initialized: version");
+  }
+  if( !message.hasInsertionTime()) {
+   throw new IllegalArgumentException("Required field not initialized: insertionTime");
   }
  }
 }

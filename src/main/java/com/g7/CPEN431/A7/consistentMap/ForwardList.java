@@ -19,7 +19,10 @@ public class ForwardList {
 
     public void addToList(Map.Entry<KeyWrapper, ValueWrapper> entry)
     {
-        keyEntries.add(new KVPair(entry.getKey().getKey(), entry.getValue().getValue(), entry.getValue().getVersion()));
+        keyEntries.add(new KVPair(entry.getKey().getKey(),
+                entry.getValue().getValue(),
+                entry.getValue().getVersion(),
+                entry.getValue().getInsertTime()));
     }
 
     public void addToList(KVPair pair)

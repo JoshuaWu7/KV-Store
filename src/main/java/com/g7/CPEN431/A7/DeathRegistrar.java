@@ -12,9 +12,7 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -33,15 +31,26 @@ public class DeathRegistrar extends TimerTask {
     Semaphore updateRequested;
     AtomicInteger bytesUsed;
     Timer timer;
+    ExecutorService threadpool;
+    static BlockingQueue<KVClient> clientPool;
 
 
     long previousPingSendTime;
     final static int SUSPENDED_THRESHOLD = 20000;
-    final static int K = 10;
+    final static int clients = 10;
+
+    static
+    {
+        clientPool = new LinkedBlockingQueue<>();
+        for(int i = 0; i < clients; i++)
+        {
+            clientPool.add(new KVClient(new byte[16384], 60));
+        }
+    }
 
     public DeathRegistrar(ConcurrentLinkedQueue<ServerRecord> pendingRecords, ConsistentMap ring, AtomicLong lastReqTime,
                           ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock maplock, Semaphore updateRequested,
-                          AtomicInteger bytesUsed, Timer timer)
+                          AtomicInteger bytesUsed, Timer timer, ExecutorService threadpool)
     throws IOException {
         this.broadcastQueue = new HashMap<>();
         this.pendingRecords = pendingRecords;
@@ -55,7 +64,9 @@ public class DeathRegistrar extends TimerTask {
         this.updateRequested = updateRequested;
         this.bytesUsed = bytesUsed;
         this.timer = timer;
+        this.threadpool = threadpool;
     }
+
 
     @Override
     public synchronized void run() {
@@ -225,33 +236,61 @@ public class DeathRegistrar extends TimerTask {
             System.out.println("Suspension detected " + self.getPort());
             lastReqTime.set(System.currentTimeMillis() + 10_000);
             // TODO: check for self loopback
-//            maplock.writeLock().lock();
-//            map.clear();
-//            maplock.writeLock().unlock();
+            maplock.writeLock().lock();
+            map.clear();
+            maplock.writeLock().unlock();
             ring.resetMap();
             broadcastQueue.clear();
             self.setAliveAtTime(System.currentTimeMillis() + 10_000);
             ring.updateServerState(self);
             broadcastQueue.put(self, self);
+            ArrayList<ServerEntry> bc = new ArrayList<>();
+            bc.add(self);
 
-//            KVClient dummy = new KVClient(new byte[16384], 20);
-//
-//
-//            //send one by one
-//            for(ServerEntry server : ring.getFullRecord())
-//            {
-//                dummy.setDestination(((ServerRecord) server).getAddress(), server.getServerPort());
-//                try {
-//                    dummy.isDead(ring.getFullRecord());
-//                } catch (KVClient.MissingValuesException e) {
-//                    throw new RuntimeException(e);
-//                } catch (IOException e) {
-//                    throw new RuntimeException(e);
-//                } catch (KVClient.ServerTimedOutException e) {
-//                } catch (InterruptedException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
+
+            //send one by one
+            Set<Future> s = new HashSet<>();
+            for(ServerEntry server : ring.getFullRecord())
+            {
+                KVClient cl;
+                try {
+                    cl = clientPool.take();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                s.add(threadpool.submit(() ->
+                {
+                    sender.setDestination(((ServerRecord) server).getAddress(), server.getServerPort());
+                    try {
+                        sender.isDead(bc);
+                        clientPool.add(cl);
+                    } catch (KVClient.MissingValuesException e) {
+                        clientPool.add(cl);
+                        throw new RuntimeException(e);
+                    } catch (IOException e) {
+                        clientPool.add(cl);
+                        throw new RuntimeException(e);
+                    } catch (KVClient.ServerTimedOutException e) {
+                        clientPool.add(cl);
+                    } catch (InterruptedException e) {
+                        clientPool.add(cl);
+                        throw new RuntimeException(e);
+                    }
+                }));
+            }
+
+            s.forEach((future) ->
+            {
+                try {
+                    future.get();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                } catch (ExecutionException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
         }
 
         previousPingSendTime = currentTime;

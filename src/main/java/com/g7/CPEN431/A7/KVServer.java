@@ -45,7 +45,7 @@ public class KVServer
     public final static int BULKPUT_MAX_SZ = 12000;
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
-    public final static int N_REPLICAS = 2;
+    public final static int N_REPLICAS = 4;
     public final static int INTERNODE_TIMEOUT = 60;
 
 
@@ -140,7 +140,15 @@ public class KVServer
 
             Timer deathRegistrarTimer = new Timer();
             Timer delayedStatusUpdateTimer = new Timer();
-            deathRegistrarTimer.schedule(new DeathRegistrar(pendingRecordDeaths, serverRing, lastReqTime, map, mapLock, keyUpdateRequested, bytesUsed, delayedStatusUpdateTimer), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
+            deathRegistrarTimer.schedule(new DeathRegistrar(pendingRecordDeaths,
+                    serverRing,
+                    lastReqTime,
+                    map,
+                    mapLock,
+                    keyUpdateRequested,
+                    bytesUsed,
+                    delayedStatusUpdateTimer,
+                    executor), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
 
 
             while(true){

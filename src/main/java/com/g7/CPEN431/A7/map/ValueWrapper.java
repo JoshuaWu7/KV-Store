@@ -9,10 +9,12 @@ public class ValueWrapper implements BytesMarshallable {
 
     private final byte[] value;
     private final int version;
+    private final long insertTime;
 
-    public ValueWrapper(byte[] value, int version) {
+    public ValueWrapper(byte[] value, int version, long insertTime) {
         this.value = value;
         this.version = version;
+        this.insertTime = insertTime;
     }
     public byte[] getValue() {
         return value;
@@ -20,6 +22,10 @@ public class ValueWrapper implements BytesMarshallable {
 
     public int getVersion() {
         return version;
+    }
+
+    public long getInsertTime() {
+        return insertTime;
     }
 
     @Override

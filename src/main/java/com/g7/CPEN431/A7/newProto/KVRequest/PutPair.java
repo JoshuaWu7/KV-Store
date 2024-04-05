@@ -10,4 +10,8 @@ public interface PutPair {
     boolean hasVersion();
     int getVersion();
     void setVersion(int version);
+    boolean hasInsertionTime();
+    long getInsertionTime();
+    void setInsertionTime(long insertionTime);
 }
+

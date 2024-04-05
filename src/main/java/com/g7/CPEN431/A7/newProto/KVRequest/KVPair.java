@@ -6,13 +6,30 @@ public class KVPair implements PutPair {
     byte[] key;
     byte[] value;
     int version = 0;
+    long insertionTime;
     public KVPair() {
     }
 
-    public KVPair(byte[] key, byte[] value, int version) {
+    public KVPair(byte[] key, byte[] value, int version, long insertionTime) {
         this.key = key;
         this.value = value;
         this.version = version;
+        this.insertionTime = insertionTime;
+    }
+
+    @Override
+    public boolean hasInsertionTime() {
+        return true;
+    }
+
+    @Override
+    public long getInsertionTime() {
+        return insertionTime;
+    }
+
+    @Override
+    public void setInsertionTime(long insertionTime) {
+        this.insertionTime = insertionTime;
     }
 
     @Override

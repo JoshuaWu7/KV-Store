@@ -237,12 +237,13 @@ public class KVServerTaskHandler implements Runnable {
                 byte[] key = payload.getKey();
                 ServerRecord destination = serverRing.getReplicas(key).get(0);
 
+
                 if(serverRing.getRtype(key) != ConsistentMap.RTYPE.PRI)
                 {
-                    if(unwrappedMessage.hasSourceAddress())
+                    if(unwrappedMessage.hasSourceAddress() || unwrappedMessage.hasSourceAddress())
                     {
-                        System.err.println("loop, from " + unwrappedMessage.getSourcePort());
-                        throw new IllegalStateException();
+                        //drop the packet due to misrouting.
+                        return;
                     }
                     // Set source so packet will be sent to correct sender.
                     unwrappedMessage.setSourceAddress(iPacket.getAddress());
@@ -542,8 +543,9 @@ public class KVServerTaskHandler implements Runnable {
             return generateAndSend(res);
         }
 
-//        boolean forwardOK = true;//forwardToReplica(payload);
-        boolean forwardOK = forwardToReplica(payload);
+        long insertionTime = System.currentTimeMillis();
+
+        boolean forwardOK = forwardToReplica(payload, insertionTime);
 
         if(!forwardOK)
         {
@@ -561,14 +563,14 @@ public class KVServerTaskHandler implements Runnable {
             RequestCacheValue res = scaf.setResponseType(PUT).build();
             pkt.set(generateAndSend(res));
             bytesUsed.addAndGet(payload.getValue().length);
-            return new ValueWrapper(payload.getValue(), payload.getVersion());
+            return new ValueWrapper(payload.getValue(), payload.getVersion(), insertionTime);
         });
         mapLock.readLock().unlock();
 
         return pkt.get();
     }
 
-    private boolean forwardToReplica (UnwrappedPayload payload)
+    private boolean forwardToReplica (UnwrappedPayload payload, long insertionTime)
     {
         KVPair pair;
 
@@ -577,13 +579,13 @@ public class KVServerTaskHandler implements Runnable {
         {
             assert payload.hasKey();
             assert payload.hasValue();
-            pair = new KVPair(payload.getKey(), payload.getValue(), payload.getVersion());
+            pair = new KVPair(payload.getKey(), payload.getValue(), payload.getVersion(), insertionTime);
         }
         else if (payload.getCommand() == REQ_CODE_DEL)
         {
             assert payload.hasKey();
             //null -> delete.
-            pair = new KVPair(payload.getKey(), null, payload.getVersion());
+            pair = new KVPair(payload.getKey(), null, payload.getVersion(), insertionTime);
         }
         else
         {
@@ -630,7 +632,6 @@ public class KVServerTaskHandler implements Runnable {
                 port = result.get().l.getDestination().getPort();
             }
             catch (InterruptedException | ExecutionException e) {
-                mapLock.readLock().unlock();
                 System.err.println("Exception while sending to " + port);
                 clientPool.addAll(borrowed);
                 throw new RuntimeException(e);
@@ -682,7 +683,7 @@ public class KVServerTaskHandler implements Runnable {
 
 
         for (PutPair pair: pairs) {
-            if(!pair.hasKey() || !pair.hasValue())
+            if(!pair.hasKey() )
             {
                 throw new IllegalArgumentException("Pair does not have fields");
             }
@@ -693,7 +694,7 @@ public class KVServerTaskHandler implements Runnable {
                 throw new IllegalArgumentException("0 Length keys detected");
             }
 
-            if(pair.getValue().length > VALUE_MAX_LEN)
+            if(pair.hasValue() && pair.getValue().length > VALUE_MAX_LEN)
             {
                 throw new IllegalArgumentException("Length too long detected");
             }
@@ -705,8 +706,23 @@ public class KVServerTaskHandler implements Runnable {
             mapLock.readLock().lock();
 
             map.compute(new KeyWrapper(pair.getKey()), (key, value) -> {
-                bytesUsed.addAndGet(pair.getValue().length);
-                return new ValueWrapper(pair.getValue(), pair.getVersion());
+                //delete operation
+
+                if(!pair.hasValue())
+                {
+                    if (value != null) bytesUsed.addAndGet(-value.getValue().length);
+                    return null;
+                }
+                else if (pair.getInsertionTime() > (value == null ? 0 : value.getInsertTime())) // put operation
+                {
+                    int oldlen = value == null ? 0 : value.getValue().length;
+                    bytesUsed.addAndGet(pair.getValue().length - oldlen);
+                    return new ValueWrapper(pair.getValue(), pair.getVersion(), pair.getInsertionTime());
+                }
+                //keep old value
+                else {
+                    return value;
+                }
             });
 
             mapLock.readLock().unlock();
@@ -771,6 +787,13 @@ public class KVServerTaskHandler implements Runnable {
         if(payload.getKey().length == 0 || payload.getKey().length > KEY_MAX_LEN)
         {
             RequestCacheValue res = scaf.setResponseType(INVALID_KEY).build();
+            return generateAndSend(res);
+        }
+
+        boolean forwardOK = forwardToReplica(payload, System.currentTimeMillis());
+        if(!forwardOK)
+        {
+            RequestCacheValue res = scaf.setResponseType(OVERLOAD_THREAD).build();
             return generateAndSend(res);
         }
 
