@@ -109,15 +109,17 @@ public class DeathRegistrar extends TimerTask {
         //update myself every time I gossip
         self.setAliveAtTime(System.currentTimeMillis());
         ring.updateServerState(self);
+
+        long start = System.currentTimeMillis();
+
         List<ServerEntry> l = ring.getFullRecord();
         ServerResponse r;
         try {
-            if(self.getPort() == 10000) System.out.println("pinging: " + target.getPort());
             r = sender.isDead(l);
         } catch (KVClient.ServerTimedOutException e)
         {
             System.out.println("gossip sending failed");
-            target.setLastSeenDeadAt(System.currentTimeMillis());
+            target.setLastSeenDeadAt(start);
             ring.updateServerState(target);
             //call for an update
             System.out.println("considering an update" + updateRequested.availablePermits());

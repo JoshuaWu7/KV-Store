@@ -78,7 +78,6 @@ public class KeyTransferHandler  extends TimerTask{
                     //clear the outgoing buffer and send the packet
                     if(currPacketSize + pairLen >= BULKPUT_MAX_SZ)
                     {
-                        System.out.println("sending" + temp.size() + "pairs");
                         sender.setDestination(target.getAddress(), target.getPort());
                         ServerResponse res = sender.bulkPut(temp);
                         temp.clear();
@@ -91,7 +90,6 @@ public class KeyTransferHandler  extends TimerTask{
 
                 }
                 //clear the buffer.
-                System.out.println("sending" + temp.size() + "pairs");
                 if(temp.size() > 0) sender.bulkPut(temp);
             } catch (KVClient.ServerTimedOutException e) {
                 // TODO: Probably a wise idea to redirect the keys someplace else, but that is a problem for future me.
