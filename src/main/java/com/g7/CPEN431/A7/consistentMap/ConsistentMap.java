@@ -182,8 +182,13 @@ public class ConsistentMap {
      * @throws NoServersException If there are no servers in the ring
      */
     public ServerRecord getNextServer() throws NoServersException {
-        assert ring.size() > VNodes;
-        lock.readLock().lock();;
+        //1 or less server
+        if(ring.size() <= VNodes)
+        {
+            throw new NoServersException();
+        }
+
+        lock.readLock().lock();
         ServerRecord next;
         for(int i = 0; i < allRecordQ.size(); i++)
         {
