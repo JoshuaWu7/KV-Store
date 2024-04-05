@@ -261,9 +261,9 @@ public class DeathRegistrar extends TimerTask {
 
                 s.add(threadpool.submit(() ->
                 {
-                    sender.setDestination(((ServerRecord) server).getAddress(), server.getServerPort());
+                    cl.setDestination(((ServerRecord) server).getAddress(), server.getServerPort());
                     try {
-                        sender.isDead(bc);
+                        cl.isDead(bc);
                         clientPool.add(cl);
                     } catch (KVClient.MissingValuesException e) {
                         clientPool.add(cl);
