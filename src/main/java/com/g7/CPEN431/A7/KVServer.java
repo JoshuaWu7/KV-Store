@@ -170,6 +170,31 @@ public class KVServer
                     delayedStatusUpdateTimer
             ));
 
+            //setup the bulkput handler
+
+            BlockingQueue<byte[]> bulkputPool = new LinkedBlockingQueue();
+            for(int i = 0; i < 8 ; i++)
+            {
+                bulkputPool.add(new byte[16384]);
+            }
+
+            executor.submit(new BulkPutServer(
+                    new DatagramSocket(self.getPort() + 500),
+                    requestCache,
+                    map,
+                    mapLock,
+                    bytesUsed,
+                    bulkputPool,
+                    false,
+                    outbound,
+                    serverRing,
+                    pendingRecordDeaths,
+                    executor,
+                    lastReqTime,
+                    keyUpdateRequested,
+                    delayedStatusUpdateTimer
+            ));
+
 
             while(true){
 

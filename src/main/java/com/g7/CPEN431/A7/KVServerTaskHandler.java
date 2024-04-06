@@ -238,11 +238,11 @@ public class KVServerTaskHandler implements Runnable {
             if(payload.hasKey())
             {
                 byte[] key = payload.getKey();
-                ServerRecord destination = serverRing.getReplicas(key).get(0);
+                ConsistentMap.RTYPE type = serverRing.getRtype(key);
 
-
-                if(serverRing.getRtype(key) != ConsistentMap.RTYPE.PRI)
+                if(type == ConsistentMap.RTYPE.UNR && payload.getCommand() == REQ_CODE_GET)
                 {
+                    ServerRecord destination = serverRing.getReplicas(key).get(new Random().nextInt(N_REPLICAS));
                     if(unwrappedMessage.hasSourceAddress() || unwrappedMessage.hasSourceAddress())
                     {
                         //drop the packet due to misrouting.
@@ -255,6 +255,25 @@ public class KVServerTaskHandler implements Runnable {
                     sendResponse(p);
                     return;
                 }
+
+                if(serverRing.getRtype(key) == ConsistentMap.RTYPE.UNR &&
+                        (payload.getCommand() == REQ_CODE_PUT || payload.getCommand() == REQ_CODE_DEL))
+                {
+                    ServerRecord destination = serverRing.getReplicas(key).get(0);
+                    if(unwrappedMessage.hasSourceAddress() || unwrappedMessage.hasSourceAddress())
+                    {
+                        //drop the packet due to misrouting.
+                        return;
+                    }
+                    // Set source so packet will be sent to correct sender.
+                    unwrappedMessage.setSourceAddress(iPacket.getAddress());
+                    unwrappedMessage.setSourcePort(iPacket.getPort());
+                    DatagramPacket p = unwrappedMessage.generatePacket(destination);
+                    sendResponse(p);
+                    return;
+                }
+
+
             }
         } catch (ConsistentMap.NoServersException e) {
             System.err.println("There are no servers in the server ring");
@@ -564,7 +583,6 @@ public class KVServerTaskHandler implements Runnable {
 
         if(!forwardOK)
         {
-            System.out.println("unable to forward");
             RequestCacheValue res = scaf.setResponseType(OVERLOAD_CACHE).build();
             return generateAndSend(res);
         }
@@ -657,7 +675,6 @@ public class KVServerTaskHandler implements Runnable {
                 //return internal error if replicas cannot be reached
                 if(status != RawPutHandler.STATUS.OK)
                 {
-                    System.err.println("failed to reach successors at port: " + port);
                     //no need to send packet here, it will be done when we return false
                     //no change in bytes used. existing value kept.
                     clientPool.addAll(borrowed);

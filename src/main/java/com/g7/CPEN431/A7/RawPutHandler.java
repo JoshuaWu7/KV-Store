@@ -33,7 +33,7 @@ public class RawPutHandler implements Callable<RawPutHandler.RESULT> {
 
     private RESULT forwardPut() {
         ServerRecord target = forwardInstructions.getDestination();
-        client.setDestination(target.getAddress(), target.getPort());
+        client.setDestination(target.getAddress(), target.getPort() + 500);
         List<STATUS> results = new ArrayList<>();
         try {
             List<PutPair> temp = new ArrayList<>();
@@ -78,7 +78,6 @@ public class RawPutHandler implements Callable<RawPutHandler.RESULT> {
 
         } catch (KVClient.ServerTimedOutException e) {
             // TODO: Probably a wise idea to redirect the keys someplace else, but that is a problem for future me.
-            System.out.println("Raw put timed out.");
             results.add(STATUS.TIMEOUT);
         } catch (KVClient.MissingValuesException e) {
             throw new RuntimeException(e);

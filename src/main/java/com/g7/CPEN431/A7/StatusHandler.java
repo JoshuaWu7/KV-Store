@@ -64,6 +64,7 @@ public class StatusHandler implements Runnable {
                 throw new RuntimeException(e);
             }
 
+            Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
             new KVServerTaskHandler(
                     rp,
                     requestCache,
@@ -80,6 +81,8 @@ public class StatusHandler implements Runnable {
                     keyUpdateRequested,
                     timer
                     ).run();
+
+            Thread.currentThread().setPriority(Thread.NORM_PRIORITY);
         }
 
     }
