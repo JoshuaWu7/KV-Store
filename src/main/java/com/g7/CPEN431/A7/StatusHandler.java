@@ -7,6 +7,7 @@ import com.g7.CPEN431.A7.map.KeyWrapper;
 import com.g7.CPEN431.A7.map.ValueWrapper;
 import com.google.common.cache.Cache;
 
+import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -54,6 +55,7 @@ public class StatusHandler implements Runnable {
 
     @Override
     public void run() {
+        ConcurrentLinkedQueue<DatagramPacket> vipOutbound = new ConcurrentLinkedQueue();
         while(true)
         {
             DatagramPacket rp;
@@ -64,6 +66,7 @@ public class StatusHandler implements Runnable {
                 throw new RuntimeException(e);
             }
 
+
             Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
             new KVServerTaskHandler(
                     rp,
@@ -73,7 +76,7 @@ public class StatusHandler implements Runnable {
                     bytesUsed,
                     bytePool,
                     isOverloaded,
-                    outbound,
+                    vipOutbound,
                     serverRing,
                     pendingRecordDeaths,
                     threadPool,
@@ -82,8 +85,18 @@ public class StatusHandler implements Runnable {
                     timer
                     ).run();
 
-            Thread.currentThread().setPriority(Thread.NORM_PRIORITY);
-        }
+            while(!vipOutbound.isEmpty())
+            {
+                try {
+                    socket.send(vipOutbound.poll());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
 
+            Thread.currentThread().setPriority(Thread.NORM_PRIORITY);
+
+
+        }
     }
 }

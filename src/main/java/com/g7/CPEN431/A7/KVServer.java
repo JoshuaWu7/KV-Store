@@ -16,6 +16,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.time.Instant;
+import java.util.Random;
 import java.util.Timer;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,6 +49,7 @@ public class KVServer
     public static ServerRecord selfLoopback;
     public static int N_REPLICAS = 4;
     public final static int INTERNODE_TIMEOUT = 60;
+    public final static int SETTLE_TIME = 10_000;
 
 
     public static void main( String[] args )
@@ -106,7 +108,7 @@ public class KVServer
             /* Setup pool of byte arrays - single thread implementation only has 1 */
             /* A simpler approach to keeping track of byte arrays*/
             BlockingQueue<byte[]> bytePool = new LinkedBlockingQueue<>();
-            for(int i = 0; i < N_THREADS + 2; i++) {
+            for(int i = 0; i < N_THREADS + 8; i++) {
                 bytePool.add(new byte[PACKET_MAX]);
             }
 
@@ -119,6 +121,23 @@ public class KVServer
                     if(!outbound.isEmpty()) {
                         try {
                             server.send(outbound.poll());
+                        } catch (IOException e) {
+                            System.err.println("Failure to send packets");
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        Thread.yield();
+                    }
+                }
+            });
+
+            ConcurrentLinkedQueue<DatagramPacket> outbound2 = new ConcurrentLinkedQueue<>();
+            DatagramSocket server2 = new DatagramSocket();
+            executor.execute(() -> {
+                while (true) {
+                    if(!outbound2.isEmpty()) {
+                        try {
+                            server2.send(outbound2.poll());
                         } catch (IOException e) {
                             System.err.println("Failure to send packets");
                             throw new RuntimeException(e);
@@ -153,13 +172,18 @@ public class KVServer
                     executor), GOSSIP_WAIT_INIT, GOSSIP_INTERVAL);
 
             //setup the status handler
+            BlockingQueue statusHandlerBytepool = new LinkedBlockingQueue();
+            for(int i = 0; i < 2; i++)
+            {
+                statusHandlerBytepool.add(new byte[16384]);
+            }
             executor.submit(new StatusHandler(
                     new DatagramSocket(self.getPort() + 1000),
                     requestCache,
                     map,
                     mapLock,
                     bytesUsed,
-                    bytePool,
+                    statusHandlerBytepool,
                     false,
                     outbound,
                     serverRing,
@@ -195,17 +219,25 @@ public class KVServer
                     delayedStatusUpdateTimer
             ));
 
+            Random rand = new Random();
 
             while(true){
+                if(N_REPLICAS > 1)
+                {
+                    Thread.sleep(0,3000);
+                }
 
                 Runtime r = Runtime.getRuntime();
                 long remainingMemory  = r.maxMemory() - (r.totalMemory() - r.freeMemory());
                 boolean isOverloaded = remainingMemory < MEMORY_SAFETY;
 
+                if(bytePool.isEmpty()) isOverloaded = true;
                 byte[] iBuf = bytePool.take();
 
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
                 server.receive(iPacket);
+
+                ConcurrentLinkedQueue selectedOutbound = rand.nextBoolean() ? outbound : outbound2;
 
                 /* Run it directly instead of via executor service. */
                 executor.execute(new KVServerTaskHandler(
@@ -216,7 +248,7 @@ public class KVServer
                         bytesUsed,
                         bytePool,
                         isOverloaded,
-                        outbound,
+                        selectedOutbound,
                         serverRing,
                         pendingRecordDeaths,
                         executor,

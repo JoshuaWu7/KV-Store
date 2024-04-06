@@ -44,7 +44,7 @@ public class DeathRegistrar extends TimerTask {
         clientPool = new LinkedBlockingQueue<>();
         for(int i = 0; i < clients; i++)
         {
-            clientPool.add(new KVClient(new byte[16384], 60));
+            clientPool.add(new KVClient(new byte[16384], 60, 4));
         }
     }
 
@@ -137,7 +137,7 @@ public class DeathRegistrar extends TimerTask {
             if(requiresUpdate)
             {
                 System.out.println("requesting update from gossip");
-                timer.schedule(new KeyTransferHandler(maplock, map, bytesUsed, ring, pendingRecords, updateRequested), 8_000);
+                timer.schedule(new KeyTransferHandler(maplock, map, bytesUsed, ring, pendingRecords, updateRequested), SETTLE_TIME);
             }
 
 
@@ -212,7 +212,7 @@ public class DeathRegistrar extends TimerTask {
             boolean requiresUpdate = updateRequested.tryAcquire();
             if(requiresUpdate)
             {
-                timer.schedule(new KeyTransferHandler(maplock, map, bytesUsed, ring, pendingRecords, updateRequested), 8_000);
+                timer.schedule(new KeyTransferHandler(maplock, map, bytesUsed, ring, pendingRecords, updateRequested), SETTLE_TIME);
             }
         }
     }

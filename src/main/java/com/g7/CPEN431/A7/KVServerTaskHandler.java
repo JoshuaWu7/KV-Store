@@ -70,7 +70,7 @@ public class KVServerTaskHandler implements Runnable {
     public final static int KEY_MAX_LEN = 32;
     public final static int VALUE_MAX_LEN = 10_000;
     public final static int CACHE_OVL_WAIT_TIME = 1000;   // Temporarily unused since cache doesn't overflow
-    public final static int THREAD_OVL_WAIT_TIME = 80;
+    public final static int THREAD_OVL_WAIT_TIME = 500;
 
     /* Response Codes */
     public final static int RES_CODE_SUCCESS = 0x0;
@@ -108,7 +108,7 @@ public class KVServerTaskHandler implements Runnable {
         clientPool = new LinkedBlockingQueue();
         for(int i = 0; i < N_REPLICAS * N_THREADS; i++)
         {
-            clientPool.add(new KVClient(new byte[16384], INTERNODE_TIMEOUT));
+            clientPool.add(new KVClient(new byte[16384], INTERNODE_TIMEOUT, 1));
         }
     }
 
@@ -242,7 +242,7 @@ public class KVServerTaskHandler implements Runnable {
 
                 if(type == ConsistentMap.RTYPE.UNR && payload.getCommand() == REQ_CODE_GET)
                 {
-                    ServerRecord destination = serverRing.getReplicas(key).get(new Random().nextInt(N_REPLICAS));
+                    ServerRecord destination = serverRing.getReplicas(key).get(0);
                     if(unwrappedMessage.hasSourceAddress() || unwrappedMessage.hasSourceAddress())
                     {
                         //drop the packet due to misrouting.
@@ -630,7 +630,8 @@ public class KVServerTaskHandler implements Runnable {
         //get replicas
         List<ServerRecord> replicas = serverRing.getReplicas(payload.getKey());
         //remove myself
-        replicas.remove(0);
+        replicas.remove(self);
+        replicas.remove(selfLoopback);
 
         //set up services for outbound requests w/ different threads.
         ExecutorCompletionService<RawPutHandler.RESULT> ecs = new ExecutorCompletionService<>(threadPool);
@@ -948,7 +949,7 @@ public class KVServerTaskHandler implements Runnable {
      */
 
     private void transferKeys() {
-         timer.schedule(new KeyTransferHandler(mapLock, map, bytesUsed, serverRing, pendingRecordDeaths, keyUpdateRequested), 8_000);
+         timer.schedule(new KeyTransferHandler(mapLock, map, bytesUsed, serverRing, pendingRecordDeaths, keyUpdateRequested), SETTLE_TIME);
 
     }
 

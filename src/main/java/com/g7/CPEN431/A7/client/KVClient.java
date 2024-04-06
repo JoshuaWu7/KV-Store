@@ -22,6 +22,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.zip.CRC32;
 
+import static com.g7.CPEN431.A7.KVServer.self;
+
 public class KVClient {
     private InetAddress serverAddress;
     private int serverPort;
@@ -29,14 +31,15 @@ public class KVClient {
     byte[] publicBuf;
     int testSequence;
     UnwrappedMessage messageOnWire;
-    byte[] myAddress;
+    byte[] blackHole;
     {
         try {
-            myAddress = Inet4Address.getLocalHost().getAddress();
+            blackHole = Inet4Address.getByName("240.0.0.0").getAddress();
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
+    byte[] myAddress =  self.getAddress().getAddress();
 
     private int timeout = 300;
     private int triesMax = 4;
@@ -82,9 +85,10 @@ public class KVClient {
         this.publicBuf = publicBuf;
     }
 
-    public KVClient(byte[] publicBuf, int timeout) {
+    public KVClient(byte[] publicBuf, int timeout, int tries) {
         this.publicBuf = publicBuf;
         this.timeout = timeout;
+        this.triesMax = tries;
     }
 
     public KVClient(InetAddress serverAddress, int serverPort, DatagramSocket socket, byte[] publicBuf, int testSequence) {
@@ -249,6 +253,14 @@ public class KVClient {
         return sendAndReceiveServerResponse(pl);
     }
 
+    public void bulkPutPump(List<PutPair> pairs) throws IOException, ServerTimedOutException, MissingValuesException, InterruptedException {
+        UnwrappedPayload pl = new UnwrappedPayload();
+        assert pairs != null;
+        pl.setCommand(REQ_CODE_BULKPUT);
+        pl.setPutPair(pairs);
+        pumpAndDump(pl);
+    }
+
     private ServerResponse put(byte[] key, byte[] value, int version) throws IOException, ServerTimedOutException, MissingValuesException, InterruptedException {
         /* Generate isAlive Message */
         UnwrappedPayload pl = new UnwrappedPayload();
@@ -325,6 +337,32 @@ public class KVClient {
         }
 
         return res;
+    }
+    private void pumpAndDump(UnwrappedPayload pl) throws
+            IOException,
+            ServerTimedOutException,
+            InterruptedException,
+            MissingValuesException {
+        ServerResponse res;
+
+        if(this.socket == null || this.serverAddress == null || this.serverPort == 0)
+        {
+            throw new RuntimeException("Destination not set");
+        }
+
+        UnwrappedMessage msg = generateMessage(pl);
+        msg.setSourcePort(8888);
+        msg.setSourceAddress(blackHole);
+
+        byte[] msgb = KVMsgSerializer.serialize(msg);
+        DatagramPacket p = new DatagramPacket(msgb, msgb.length, serverAddress, serverPort);
+        messageOnWire = msg;
+
+
+        for(int i = 0; i < triesMax; i++)
+        {
+            socket.send(p);
+        }
     }
 
      byte[] generateMsgID() throws UnknownHostException {

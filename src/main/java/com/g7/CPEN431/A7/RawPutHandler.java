@@ -51,16 +51,10 @@ public class RawPutHandler implements Callable<RawPutHandler.RESULT> {
                 //clear the outgoing buffer and send the packet
                 if (currPacketSize + pairLen >= BULKPUT_MAX_SZ) {
                     client.setDestination(target.getAddress(), target.getPort());
-                    if(isLast)
-                    {
-                        ServerResponse res = client.bulkPut(temp);
-                        results.add(res.getErrCode() == KVServerTaskHandler.RES_CODE_SUCCESS ? STATUS.OK: STATUS.FAIL);
-                    }
-                    else
-                    {
-                        ServerResponse res = client.bulkPut(temp);
-                        results.add(res.getErrCode() == KVServerTaskHandler.RES_CODE_SUCCESS ? STATUS.OK: STATUS.FAIL);
-                    }
+
+                    client.bulkPutPump(temp);
+                    results.add(STATUS.OK);
+
                     temp.clear();
                     currPacketSize = 0;
                 }
@@ -71,8 +65,8 @@ public class RawPutHandler implements Callable<RawPutHandler.RESULT> {
             }
             //clear the buffer.
             if (temp.size() > 0) {
-               ServerResponse res = client.bulkPut(temp);
-               results.add(res.getErrCode() == KVServerTaskHandler.RES_CODE_SUCCESS ? STATUS.OK: STATUS.FAIL);
+                client.bulkPutPump(temp);
+               results.add(STATUS.OK);
             }
 
 

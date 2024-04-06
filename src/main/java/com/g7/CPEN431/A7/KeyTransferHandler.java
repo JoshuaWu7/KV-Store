@@ -15,6 +15,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -61,14 +62,23 @@ public class KeyTransferHandler  extends TimerTask{
 
 
         byte[] byteArr = new byte[16384];
-        KVClient sender = new KVClient(byteArr);
+        KVClient sender = new KVClient(byteArr, 10, 2);
         Set<KVPair> toDelete = new HashSet<>();
+        AtomicBoolean clearFlag = new AtomicBoolean(false);
 
         toBeForwarded.forEach((forwardList -> {
+            if(clearFlag.get()) return;
+            if(forwardList.getKeyEntries().size() > 50000)
+            {
+                mapLock.writeLock().lock();
+                map.clear();
+                clearFlag.set(true);
+                mapLock.writeLock().unlock();
+                return;
+            }
             ServerRecord target = forwardList.getDestination();
             sender.setDestination(target.getAddress(), target.getPort());
             try {
-                System.out.println("transferring out " + forwardList.getKeyEntries().size() + "keys");
                 List<PutPair> temp = new ArrayList<>();
                 int currPacketSize = 0;
                 for (PutPair pair : forwardList.getKeyEntries()) {
@@ -79,7 +89,7 @@ public class KeyTransferHandler  extends TimerTask{
                     if(currPacketSize + pairLen >= BULKPUT_MAX_SZ)
                     {
                         sender.setDestination(target.getAddress(), target.getPort());
-                        ServerResponse res = sender.bulkPut(temp);
+                        sender.bulkPutPump(temp);
                         temp.clear();
                         currPacketSize = 0;
                     }
@@ -90,7 +100,7 @@ public class KeyTransferHandler  extends TimerTask{
 
                 }
                 //clear the buffer.
-                if(temp.size() > 0) sender.bulkPut(temp);
+                if(temp.size() > 0) sender.bulkPutPump(temp);
             } catch (KVClient.ServerTimedOutException e) {
                 // TODO: Probably a wise idea to redirect the keys someplace else, but that is a problem for future me.
                 System.out.println("Bulk transfer timed out. Marking recipient as dead.");
@@ -110,6 +120,8 @@ public class KeyTransferHandler  extends TimerTask{
             ValueWrapper v = map.remove(new KeyWrapper(pair.getKey()));
             if(v != null) bytesUsed.addAndGet(-pair.getValue().length);
         });
+
+        System.out.println("ending key transfer. @" + self.getPort());
 
     }
 }

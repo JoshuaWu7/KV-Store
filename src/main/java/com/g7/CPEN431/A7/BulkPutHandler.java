@@ -21,7 +21,7 @@ public class BulkPutHandler extends KVServerTaskHandler {
 
     @Override
     public void run() {
-        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+        Thread.currentThread().setPriority(Thread.NORM_PRIORITY + 1);
         super.run();
     }
 }
