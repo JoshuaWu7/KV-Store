@@ -71,7 +71,7 @@ public class KVServer
 
             DatagramSocket server = new DatagramSocket(PORT);
             /* Eliminated in single thread */
-            ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+            ExecutorService executor = Executors.newCachedThreadPool();
 
             ConcurrentMap<KeyWrapper, ValueWrapper> map
                     = ChronicleMap

@@ -931,7 +931,7 @@ public class KVServerTaskHandler implements Runnable {
      */
 
     private void transferKeys() {
-         timer.schedule(new KeyTransferHandler(mapLock, map, bytesUsed, serverRing, pendingRecordDeaths, keyUpdateRequested), 15_000);
+         timer.schedule(new KeyTransferHandler(mapLock, map, bytesUsed, serverRing, pendingRecordDeaths, keyUpdateRequested), 8_000);
 
     }
 
