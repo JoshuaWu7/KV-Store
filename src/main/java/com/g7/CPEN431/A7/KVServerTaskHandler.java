@@ -288,8 +288,8 @@ public class KVServerTaskHandler implements Runnable {
 
 
         /* Requests here can be handled locally */
-        if(!byteArrRet) bytePool.offer(iPacket.getData());
-        byteArrRet = true;
+//        if(!byteArrRet) bytePool.offer(iPacket.getData());
+//        byteArrRet = true;
 
 
 

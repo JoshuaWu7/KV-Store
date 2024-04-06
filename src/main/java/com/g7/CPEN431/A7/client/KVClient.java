@@ -29,6 +29,14 @@ public class KVClient {
     byte[] publicBuf;
     int testSequence;
     UnwrappedMessage messageOnWire;
+    byte[] myAddress;
+    {
+        try {
+            myAddress = Inet4Address.getLocalHost().getAddress();
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private int timeout = 300;
     private int triesMax = 4;
@@ -329,7 +337,7 @@ public class KVClient {
 
         ByteBuffer idAndPl = ByteBuffer.allocate(16);
         idAndPl.order(ByteOrder.LITTLE_ENDIAN);
-        idAndPl.put(Inet4Address.getLocalHost().getAddress());
+        idAndPl.put(myAddress);
         idAndPl.putShort((short) (socket.getPort() - 32768));
         idAndPl.put(rand);
         idAndPl.putLong(System.nanoTime());
