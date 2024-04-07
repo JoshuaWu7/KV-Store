@@ -1,6 +1,6 @@
 # Something about the A11
 Group ID: 7
-Verification Code: 8ED311163D1E5151310CA99B4D8C9E92
+Verification Code: 07556FC164DA132A2428E71CEFBFB0F6
 Used Run Command:
 ``` shell
 java -Xmx512m \
