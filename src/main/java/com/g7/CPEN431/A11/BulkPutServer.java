@@ -17,8 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 
 public class BulkPutServer extends StatusHandler {
-    public BulkPutServer(DatagramSocket socket, Cache<RequestCacheKey, DatagramPacket> requestCache, ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock mapLock, AtomicInteger bytesUsed, BlockingQueue<byte[]> bytePool, boolean isOverloaded, ConcurrentLinkedQueue<DatagramPacket> outbound, ConsistentMap serverRing, ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths, ExecutorService threadPool, AtomicLong lastReqTime, Semaphore keyUpdateRequested, Timer time) {
-        super(socket, requestCache, map, mapLock, bytesUsed, bytePool, isOverloaded, outbound, serverRing, pendingRecordDeaths, threadPool, lastReqTime, keyUpdateRequested, time);
+    public BulkPutServer(DatagramSocket socket, Cache<RequestCacheKey, DatagramPacket> requestCache, ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock mapLock, AtomicInteger bytesUsed, BlockingQueue<byte[]> bytePool, boolean isOverloaded, ConsistentMap serverRing, ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths, ExecutorService threadPool, AtomicLong lastReqTime, Semaphore keyUpdateRequested, Timer time, DatagramSocket outSock) {
+        super(socket, requestCache, map, mapLock, bytesUsed, bytePool, isOverloaded, serverRing, pendingRecordDeaths, threadPool, lastReqTime, keyUpdateRequested, time, outSock);
     }
 
     @Override
@@ -42,13 +42,13 @@ public class BulkPutServer extends StatusHandler {
                     bytesUsed,
                     bytePool,
                     isOverloaded,
-                    outbound,
                     serverRing,
                     pendingRecordDeaths,
                     threadPool,
                     lastReqTime,
                     keyUpdateRequested,
-                    timer
+                    timer,
+                    outboundSocket
             ));
         }
 

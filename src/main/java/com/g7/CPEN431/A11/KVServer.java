@@ -9,12 +9,15 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import net.openhft.chronicle.map.ChronicleMap;
 
+import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.Timer;
 import java.util.concurrent.*;
@@ -40,9 +43,9 @@ public class KVServer
     final static int AVG_VAL_SZ = 500;
     final static String SERVER_LIST = "servers.txt";
     final static int VNODE_COUNT = 4;
-    final static int GOSSIP_INTERVAL = 300;
+    final static int GOSSIP_INTERVAL = 500;
     final static int GOSSIP_WAIT_INIT = 15_000;
-    public final static int BULKPUT_MAX_SZ = 12000;
+    public final static int BULKPUT_MAX_SZ = 9000;
     public static ServerRecord self;
     public static ServerRecord selfLoopback;
     public static int N_REPLICAS = 4;
@@ -106,45 +109,13 @@ public class KVServer
             /* Setup pool of byte arrays - single thread implementation only has 1 */
             /* A simpler approach to keeping track of byte arrays*/
             BlockingQueue<byte[]> bytePool = new LinkedBlockingQueue<>();
-            for(int i = 0; i < N_THREADS + 8; i++) {
+            for(int i = 0; i < N_THREADS; i++) {
                 bytePool.add(new byte[PACKET_MAX]);
             }
 
             Semaphore keyUpdateRequested = new Semaphore(1);
 
-            /* Outbound Queue and Thread - eliminated in single thread implementation */
-            ConcurrentLinkedQueue<DatagramPacket> outbound = new ConcurrentLinkedQueue<>();
-            executor.execute(() -> {
-                while (true) {
-                    if(!outbound.isEmpty()) {
-                        try {
-                            server.send(outbound.poll());
-                        } catch (IOException e) {
-                            System.err.println("Failure to send packets");
-                            throw new RuntimeException(e);
-                        }
-                    } else {
-                        Thread.yield();
-                    }
-                }
-            });
 
-            ConcurrentLinkedQueue<DatagramPacket> outbound2 = new ConcurrentLinkedQueue<>();
-            DatagramSocket server2 = new DatagramSocket();
-            executor.execute(() -> {
-                while (true) {
-                    if(!outbound2.isEmpty()) {
-                        try {
-                            server2.send(outbound2.poll());
-                        } catch (IOException e) {
-                            System.err.println("Failure to send packets");
-                            throw new RuntimeException(e);
-                        }
-                    } else {
-                        Thread.yield();
-                    }
-                }
-            });
 
             /* Set up the list of servers */
             ConsistentMap serverRing = new ConsistentMap(VNODE_COUNT, SERVER_LIST);
@@ -175,67 +146,76 @@ public class KVServer
             {
                 statusHandlerBytepool.add(new byte[16384]);
             }
+            DatagramSocket statusSocket = new DatagramSocket(self.getPort() + 1000);
             executor.submit(new StatusHandler(
-                    new DatagramSocket(self.getPort() + 1000),
+                    statusSocket,
                     requestCache,
                     map,
                     mapLock,
                     bytesUsed,
                     statusHandlerBytepool,
                     false,
-                    outbound,
                     serverRing,
                     pendingRecordDeaths,
                     executor,
                     lastReqTime,
                     keyUpdateRequested,
-                    delayedStatusUpdateTimer
+                    delayedStatusUpdateTimer,
+                    statusSocket
             ));
 
             //setup the bulkput handler
 
-            BlockingQueue<byte[]> bulkputPool = new LinkedBlockingQueue();
-            for(int i = 0; i < 8 ; i++)
+//            BlockingQueue<byte[]> bulkputPool = new LinkedBlockingQueue();
+//            for(int i = 0; i < 16 ; i++)
+//            {
+//                bulkputPool.add(new byte[16384]);
+//            }
+
+//            DatagramSocket bulkputSocket = new DatagramSocket(self.getPort() + 500);
+//            executor.submit(new BulkPutServer(
+//                    bulkputSocket,
+//                    requestCache,
+//                    map,
+//                    mapLock,
+//                    bytesUsed,
+//                    bulkputPool,
+//                    false,
+//                    serverRing,
+//                    pendingRecordDeaths,
+//                    executor,
+//                    lastReqTime,
+//                    keyUpdateRequested,
+//                    delayedStatusUpdateTimer,
+//                    bulkputSocket
+//            ));
+
+            //SocketPool
+            BlockingQueue<DatagramSocket> socketPool = new LinkedBlockingQueue<>();
+            for(int i = 0; i < N_THREADS; i++)
             {
-                bulkputPool.add(new byte[16384]);
+                socketPool.add(new DatagramSocket());
             }
 
-            executor.submit(new BulkPutServer(
-                    new DatagramSocket(self.getPort() + 500),
-                    requestCache,
-                    map,
-                    mapLock,
-                    bytesUsed,
-                    bulkputPool,
-                    false,
-                    outbound,
-                    serverRing,
-                    pendingRecordDeaths,
-                    executor,
-                    lastReqTime,
-                    keyUpdateRequested,
-                    delayedStatusUpdateTimer
-            ));
-
-            Random rand = new Random();
 
             while(true){
                 if(N_REPLICAS > 1)
                 {
-                    Thread.sleep(0,3000);
+                    Thread.sleep(0,32000);
                 }
 
                 Runtime r = Runtime.getRuntime();
                 long remainingMemory  = r.maxMemory() - (r.totalMemory() - r.freeMemory());
                 boolean isOverloaded = remainingMemory < MEMORY_SAFETY;
 
-                if(bytePool.isEmpty()) isOverloaded = true;
                 byte[] iBuf = bytePool.take();
 
                 DatagramPacket iPacket = new DatagramPacket(iBuf, iBuf.length);
                 server.receive(iPacket);
 
-                ConcurrentLinkedQueue selectedOutbound = rand.nextBoolean() ? outbound : outbound2;
+                DatagramSocket selectedSocket = socketPool.take();
+                socketPool.add(selectedSocket);
+
 
                 /* Run it directly instead of via executor service. */
                 executor.execute(new KVServerTaskHandler(
@@ -246,13 +226,13 @@ public class KVServer
                         bytesUsed,
                         bytePool,
                         isOverloaded,
-                        selectedOutbound,
                         serverRing,
                         pendingRecordDeaths,
                         executor,
                         lastReqTime,
                         keyUpdateRequested,
-                        delayedStatusUpdateTimer
+                        delayedStatusUpdateTimer,
+                        selectedSocket
                         ));
 
                 /* Executed here in single thread impl. */

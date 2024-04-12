@@ -30,7 +30,15 @@ public class KVClient {
     byte[] publicBuf;
     int testSequence;
     UnwrappedMessage messageOnWire;
-    byte[] blackHole;
+    static InetAddress blackHoleInet;
+    {
+        try {
+            blackHoleInet = Inet4Address.getByName("240.0.0.0");
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    static byte[] blackHole;
     {
         try {
             blackHole = Inet4Address.getByName("240.0.0.0").getAddress();
@@ -260,6 +268,15 @@ public class KVClient {
         pumpAndDump(pl);
     }
 
+    public static byte[] bulkPutPumpStatic(List<PutPair> pairs)
+    {
+        UnwrappedPayload pl = new UnwrappedPayload();
+        assert pairs != null;
+        pl.setCommand(REQ_CODE_BULKPUT);
+        pl.setPutPair(pairs);
+        return pumpAndDumpStatic(pl);
+    }
+
     private ServerResponse put(byte[] key, byte[] value, int version) throws IOException, ServerTimedOutException, MissingValuesException, InterruptedException {
         /* Generate isAlive Message */
         UnwrappedPayload pl = new UnwrappedPayload();
@@ -364,6 +381,16 @@ public class KVClient {
         }
     }
 
+    private static byte[] pumpAndDumpStatic(UnwrappedPayload pl)
+    {
+
+        UnwrappedMessage msg = generateMessageStatic(pl);
+        msg.setSourcePort(8888);
+        msg.setSourceAddress(blackHoleInet);
+
+        return KVMsgSerializer.serialize(msg);
+    }
+
      byte[] generateMsgID() throws UnknownHostException {
         byte[] rand = new byte[2];
         try {
@@ -382,12 +409,53 @@ public class KVClient {
         return idAndPl.array();
     }
 
+    static byte[] generateMsgIDStatic()
+    {
+        byte[] rand = new byte[2];
+        try {
+            SecureRandom.getInstanceStrong().nextBytes(rand);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
+        ByteBuffer idAndPl = ByteBuffer.allocate(16);
+        idAndPl.order(ByteOrder.LITTLE_ENDIAN);
+        idAndPl.put(self.getAddress().getAddress());
+        idAndPl.putShort((short) (self.getPort() - 32768));
+        idAndPl.put(rand);
+        idAndPl.putLong(System.nanoTime());
+
+        return idAndPl.array();
+    }
+
     UnwrappedMessage generateMessage(UnwrappedPayload pl) throws UnknownHostException {
         byte[] plb = KVRequestSerializer.serialize(pl);
 
         ByteBuffer idAndpl = ByteBuffer.allocate(16 + plb.length);
 
         byte[] msgID = generateMsgID();
+
+        idAndpl.put(msgID);
+        idAndpl.put(plb);
+        idAndpl.flip();
+
+        CRC32 crc32 = new CRC32();
+        crc32.update(idAndpl.array());
+        long checksum = crc32.getValue();
+
+        UnwrappedMessage msg = new UnwrappedMessage();
+        msg.setCheckSum(checksum);
+        msg.setPayload(plb);
+        msg.setMessageID(msgID);
+        return msg;
+    }
+
+    static UnwrappedMessage generateMessageStatic(UnwrappedPayload pl) {
+        byte[] plb = KVRequestSerializer.serialize(pl);
+
+        ByteBuffer idAndpl = ByteBuffer.allocate(16 + plb.length);
+
+        byte[] msgID = generateMsgIDStatic();
 
         idAndpl.put(msgID);
         idAndpl.put(plb);

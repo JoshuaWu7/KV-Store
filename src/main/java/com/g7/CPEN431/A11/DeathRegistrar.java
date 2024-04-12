@@ -55,7 +55,7 @@ public class DeathRegistrar extends TimerTask {
         this.broadcastQueue = new HashMap<>();
         this.pendingRecords = pendingRecords;
         this.ring = ring;
-        this.sender = new KVClient(null, 0, new DatagramSocket(), new byte[16384]);
+        this.sender = new KVClient(new byte[16384], 500, 4);
         this.random = new Random();
         this.previousPingSendTime = -1;
         this.lastReqTime = lastReqTime;
@@ -235,7 +235,7 @@ public class DeathRegistrar extends TimerTask {
             maplock.writeLock().lock();
             map.clear();
             maplock.writeLock().unlock();
-//            ring.resetMap();
+            ring.resetMap();
             broadcastQueue.clear();
             self.setAliveAtTime(System.currentTimeMillis() + 10_000);
             ring.updateServerState(self);

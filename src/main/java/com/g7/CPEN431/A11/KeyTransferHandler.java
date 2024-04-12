@@ -10,6 +10,9 @@ import com.g7.CPEN431.A11.newProto.KVRequest.KVPair;
 import com.g7.CPEN431.A11.newProto.KVRequest.PutPair;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.SocketException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -58,25 +61,20 @@ public class KeyTransferHandler  extends TimerTask{
 
         mapLock.writeLock().unlock();
 
+        DatagramSocket s;
+        try {
+            s = new DatagramSocket();
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
 
 
         byte[] byteArr = new byte[16384];
-        KVClient sender = new KVClient(byteArr, 10, 2);
         Set<KVPair> toDelete = new HashSet<>();
         AtomicBoolean clearFlag = new AtomicBoolean(false);
 
         toBeForwarded.forEach((forwardList -> {
-            if(clearFlag.get()) return;
-            if(forwardList.getKeyEntries().size() > 50000)
-            {
-                mapLock.writeLock().lock();
-                map.clear();
-                clearFlag.set(true);
-                mapLock.writeLock().unlock();
-                return;
-            }
             ServerRecord target = forwardList.getDestination();
-            sender.setDestination(target.getAddress(), target.getPort());
             try {
                 List<PutPair> temp = new ArrayList<>();
                 int currPacketSize = 0;
@@ -87,10 +85,16 @@ public class KeyTransferHandler  extends TimerTask{
                     //clear the outgoing buffer and send the packet
                     if(currPacketSize + pairLen >= BULKPUT_MAX_SZ)
                     {
-                        sender.setDestination(target.getAddress(), target.getPort());
-                        sender.bulkPutPump(temp);
+                        byte[] pairs = KVClient.bulkPutPumpStatic(temp);
+                        DatagramPacket p = new DatagramPacket(pairs, pairs.length, target.getAddress(), target.getPort());
+                        s.send(p);
                         temp.clear();
                         currPacketSize = 0;
+                        try {
+                            Thread.sleep(4);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
                     //add to the buffer.
                     temp.add(pair);
@@ -99,15 +103,13 @@ public class KeyTransferHandler  extends TimerTask{
 
                 }
                 //clear the buffer.
-                if(temp.size() > 0) sender.bulkPutPump(temp);
-            } catch (KVClient.ServerTimedOutException e) {
-                // TODO: Probably a wise idea to redirect the keys someplace else, but that is a problem for future me.
-                System.out.println("Bulk transfer timed out. Marking recipient as dead.");
-                return;
-            } catch (KVClient.MissingValuesException e) {
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                if(temp.size() > 0)
+                {
+                    byte[] pairs = KVClient.bulkPutPumpStatic(temp);
+                    DatagramPacket p = new DatagramPacket(pairs, pairs.length, target.getAddress(), target.getPort());
+                    s.send(p);
+                }
+
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -117,7 +119,7 @@ public class KeyTransferHandler  extends TimerTask{
         toDelete.forEach((pair) ->
         {
             ValueWrapper v = map.remove(new KeyWrapper(pair.getKey()));
-            if(v != null) bytesUsed.addAndGet(-pair.getValue().length);
+            if(v != null) bytesUsed.addAndGet(-v.getValue().length);
         });
 
         System.out.println("ending key transfer. @" + self.getPort());

@@ -4,7 +4,6 @@ import com.g7.CPEN431.A11.cache.RequestCacheKey;
 import com.g7.CPEN431.A11.cache.RequestCacheValue;
 import com.g7.CPEN431.A11.client.KVClient;
 import com.g7.CPEN431.A11.consistentMap.ConsistentMap;
-import com.g7.CPEN431.A11.consistentMap.ForwardList;
 import com.g7.CPEN431.A11.consistentMap.ServerRecord;
 import com.g7.CPEN431.A11.map.KeyWrapper;
 import com.g7.CPEN431.A11.map.ValueWrapper;
@@ -17,9 +16,7 @@ import com.g7.CPEN431.A11.wrappers.UnwrappedPayload;
 import com.google.common.cache.Cache;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.*;
@@ -58,10 +55,9 @@ public class KVServerTaskHandler implements Runnable {
 
     final private BlockingQueue<byte[]> bytePool;  //this is thread safe
     final private boolean isOverloaded;
-    final private ConcurrentLinkedQueue<DatagramPacket> outbound;
+    final private DatagramSocket outSock;
     final private ConcurrentLinkedQueue<ServerRecord>pendingRecordDeaths;
     final private Semaphore keyUpdateRequested;
-    final private static BlockingQueue<KVClient> clientPool;
     //do not use
     ExecutorService threadPool;
 
@@ -100,17 +96,6 @@ public class KVServerTaskHandler implements Runnable {
     public final static int STAT_CODE_OK = 0x00;
     public final static int STAT_CODE_OLD = 0x01;
     public final static int STAT_CODE_NEW = 0x02;
-
-
-    static
-    {
-        clientPool = new LinkedBlockingQueue();
-        for(int i = 0; i < N_REPLICAS * N_THREADS; i++)
-        {
-            clientPool.add(new KVClient(new byte[16384], INTERNODE_TIMEOUT, 1));
-        }
-    }
-
     public KVServerTaskHandler(DatagramPacket iPacket,
                                Cache<RequestCacheKey, DatagramPacket> requestCache,
                                ConcurrentMap<KeyWrapper, ValueWrapper> map,
@@ -118,13 +103,13 @@ public class KVServerTaskHandler implements Runnable {
                                AtomicInteger bytesUsed,
                                BlockingQueue<byte[]> bytePool,
                                boolean isOverloaded,
-                               ConcurrentLinkedQueue<DatagramPacket> outbound,
                                ConsistentMap serverRing,
                                ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths,
                                ExecutorService threadPool,
                                AtomicLong lastReqTime,
                                Semaphore keyUpdateRequested,
-                               Timer timer) {
+                               Timer timer,
+                               DatagramSocket outSock) {
         this.iPacket = iPacket;
         this.requestCache = requestCache;
         this.map = map;
@@ -132,13 +117,13 @@ public class KVServerTaskHandler implements Runnable {
         this.bytesUsed = bytesUsed;
         this.bytePool = bytePool;
         this.isOverloaded = isOverloaded;
-        this.outbound = outbound;
         this.serverRing = serverRing;
         this.pendingRecordDeaths = pendingRecordDeaths;
         this.threadPool = threadPool;
         this.lastReqTime = lastReqTime;
         this.keyUpdateRequested = keyUpdateRequested;
         this.timer = timer;
+        this.outSock = outSock;
 
     }
 
@@ -151,11 +136,15 @@ public class KVServerTaskHandler implements Runnable {
         this.bytesUsed = null;
         this.bytePool = null;
         this.isOverloaded = false;
-        this.outbound = null;
         this.serverRing = serverRing;
         this.pendingRecordDeaths = pendingRecordDeaths;
         this.lastReqTime = new AtomicLong();
         this.keyUpdateRequested = null;
+        try {
+            this.outSock = new DatagramSocket();
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // empty constructor for testing BulkPutTest
@@ -167,11 +156,15 @@ public class KVServerTaskHandler implements Runnable {
         this.bytesUsed = bytesUsed;
         this.bytePool = null;
         this.isOverloaded = false;
-        this.outbound = null;
         this.serverRing = null;
         this.pendingRecordDeaths = null;
         this.lastReqTime = new AtomicLong();
         this.keyUpdateRequested = null;
+        try {
+            this.outSock = new DatagramSocket();
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
@@ -239,12 +232,15 @@ public class KVServerTaskHandler implements Runnable {
                 byte[] key = payload.getKey();
                 ConsistentMap.RTYPE type = serverRing.getRtype(key);
 
-                if(type == ConsistentMap.RTYPE.UNR && payload.getCommand() == REQ_CODE_GET)
+
+                //I am a replica, and the request is a write. Forward to primary.
+                if(type != ConsistentMap.RTYPE.PRI)
                 {
                     ServerRecord destination = serverRing.getReplicas(key).get(0);
                     if(unwrappedMessage.hasSourceAddress() || unwrappedMessage.hasSourceAddress())
                     {
                         //drop the packet due to misrouting.
+                        System.err.println("misrouting detected, packet dropped");
                         return;
                     }
                     // Set source so packet will be sent to correct sender.
@@ -254,25 +250,6 @@ public class KVServerTaskHandler implements Runnable {
                     sendResponse(p);
                     return;
                 }
-
-                if(serverRing.getRtype(key) == ConsistentMap.RTYPE.UNR &&
-                        (payload.getCommand() == REQ_CODE_PUT || payload.getCommand() == REQ_CODE_DEL))
-                {
-                    ServerRecord destination = serverRing.getReplicas(key).get(0);
-                    if(unwrappedMessage.hasSourceAddress() || unwrappedMessage.hasSourceAddress())
-                    {
-                        //drop the packet due to misrouting.
-                        return;
-                    }
-                    // Set source so packet will be sent to correct sender.
-                    unwrappedMessage.setSourceAddress(iPacket.getAddress());
-                    unwrappedMessage.setSourcePort(iPacket.getPort());
-                    DatagramPacket p = unwrappedMessage.generatePacket(destination);
-                    sendResponse(p);
-                    return;
-                }
-
-
             }
         } catch (ConsistentMap.NoServersException e) {
             System.err.println("There are no servers in the server ring");
@@ -344,7 +321,7 @@ public class KVServerTaskHandler implements Runnable {
             IOException{
         //verify overload condition
         if(isOverloaded) {
-            //System.out.println("Cache overflow. Delay Requested");
+            System.out.println("Cache overflow. Delay Requested");
             RequestCacheValue res = scaf
                     .setResponseType(OVERLOAD_THREAD)
                     .build();
@@ -441,7 +418,11 @@ public class KVServerTaskHandler implements Runnable {
         if (responseSent) throw new IllegalStateException();
 
         responseSent = true;
-        outbound.offer(d);
+        try {
+            outSock.send(d);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
@@ -567,6 +548,7 @@ public class KVServerTaskHandler implements Runnable {
         }
 
         if(bytesUsed.get() >= MAP_SZ) {
+            System.out.println("clearing memory");
             RequestCacheValue res = scaf.setResponseType(NO_MEM).build();
             //TODO UNSAFE, but shitty client so whatever...
             mapLock.writeLock().lock();
@@ -591,15 +573,13 @@ public class KVServerTaskHandler implements Runnable {
         //atomically put and respond, `tis thread safe.
         AtomicReference<IOException> ioexception= new AtomicReference<>();
         AtomicReference<DatagramPacket> pkt = new AtomicReference<>();
-        map.compute(new KeyWrapper(payload.getKey()), (key, value) -> {
-            RequestCacheValue res = scaf.setResponseType(PUT).build();
-            pkt.set(generateAndSend(res));
-            bytesUsed.addAndGet(payload.getValue().length);
-            return new ValueWrapper(payload.getValue(), payload.getVersion(), insertionTime);
-        });
+        bytesUsed.addAndGet(payload.getValue().length);
+        ValueWrapper old = map.put(new KeyWrapper(payload.getKey()), new ValueWrapper(payload.getValue(), payload.getVersion(), insertionTime));
+        if(old != null) bytesUsed.addAndGet(old.getValue().length);
         mapLock.readLock().unlock();
 
-        return pkt.get();
+        RequestCacheValue res = scaf.setResponseType(PUT).build();
+        return generateAndSend(res);
     }
 
     private boolean forwardToReplica (UnwrappedPayload payload, long insertionTime)
@@ -632,58 +612,22 @@ public class KVServerTaskHandler implements Runnable {
         replicas.remove(self);
         replicas.remove(selfLoopback);
 
-        //set up services for outbound requests w/ different threads.
-        ExecutorCompletionService<RawPutHandler.RESULT> ecs = new ExecutorCompletionService<>(threadPool);
-        List<KVClient> borrowed = new ArrayList<>();
+        //construct list
+        List<PutPair> pairToForward = new ArrayList<>();
+        pairToForward.add(pair);
 
         //for each replica - create a task and submit to thread pool.
+        byte[] msg = KVClient.bulkPutPumpStatic(pairToForward);
         for(ServerRecord server : replicas)
         {
-            ForwardList fl = new ForwardList(server);
-            fl.addToList(pair);
-            KVClient cl;
-
+            DatagramPacket p = new DatagramPacket(msg, msg.length, server.getAddress(), server.getPort());
             try {
-                cl = clientPool.take();
-                borrowed.add(cl);
-            } catch (InterruptedException e) {
+                outSock.send(p);
+            } catch (IOException e) {
                 throw new RuntimeException(e);
-            }
-
-            ecs.submit(new RawPutHandler(fl, cl));
-        }
-
-        //join all the threads to get result.
-        for(int i = 0; i < N_REPLICAS - 1; i++)
-        {
-            Future<RawPutHandler.RESULT> result;
-            List<RawPutHandler.STATUS> statuses;
-            int port = 0;
-            try {
-                result = ecs.take();
-                statuses = result.get().s;
-                port = result.get().l.getDestination().getPort();
-            }
-            catch (InterruptedException | ExecutionException e) {
-                System.err.println("Exception while sending to " + port);
-                clientPool.addAll(borrowed);
-                throw new RuntimeException(e);
-            }
-
-            for(RawPutHandler.STATUS status : statuses)
-            {
-                //return internal error if replicas cannot be reached
-                if(status != RawPutHandler.STATUS.OK)
-                {
-                    //no need to send packet here, it will be done when we return false
-                    //no change in bytes used. existing value kept.
-                    clientPool.addAll(borrowed);
-                    return false;
-                }
             }
         }
 
-        clientPool.addAll(borrowed);
         return true;
     }
 
@@ -745,7 +689,7 @@ public class KVServerTaskHandler implements Runnable {
                     if (value != null) bytesUsed.addAndGet(-value.getValue().length);
                     return null;
                 }
-                else if (pair.getInsertionTime() > (value == null ? 0 : value.getInsertTime())) // put operation
+                else if (pair.getInsertionTime() >= (value == null ? 0 : value.getInsertTime())) // put operation
                 {
                     int oldlen = value == null ? 0 : value.getValue().length;
                     bytesUsed.addAndGet(pair.getValue().length - oldlen);
@@ -783,23 +727,20 @@ public class KVServerTaskHandler implements Runnable {
 
         //atomically get and respond
         mapLock.readLock().lock();
-        AtomicReference<DatagramPacket> pkt = new AtomicReference<>();
-        map.compute(new KeyWrapper(payload.getKey()), (key, value) -> {
-            RequestCacheValue res;
-            if (value == null) {
-                res = scaf.setResponseType(NO_KEY).build();
-            } else {
-                res = scaf
-                        .setResponseType(VALUE)
-                        .setValue(value)
-                        .build();
-            }
-            pkt.set(generateAndSend(res));
-            return value;
-        });
+        ValueWrapper v = map.get(new KeyWrapper(payload.getKey()));
         mapLock.readLock().unlock();
 
-        return pkt.get();
+
+        RequestCacheValue res;
+        if (v == null) {
+            res = scaf.setResponseType(NO_KEY).build();
+        } else {
+            res = scaf
+                    .setResponseType(VALUE)
+                    .setValue(v)
+                    .build();
+        }
+        return generateAndSend(res);
     }
 
     /**
@@ -832,20 +773,19 @@ public class KVServerTaskHandler implements Runnable {
         //atomically del and respond
         AtomicReference<DatagramPacket> pkt = new AtomicReference<>();
         mapLock.readLock().lock();
-        map.compute(new KeyWrapper(payload.getKey()), (key, value) -> {
-            if (value == null) {
-                RequestCacheValue res = scaf.setResponseType(NO_KEY).build();
-                pkt.set(generateAndSend(res));
-            } else {
-                bytesUsed.addAndGet(-value.getValue().length);
-                RequestCacheValue res = scaf.setResponseType(DEL).build();
-                pkt.set(generateAndSend(res));
-            }
-            return null;
-        });
+        ValueWrapper v = map.remove(new KeyWrapper(payload.getKey()));
         mapLock.readLock().unlock();
 
-        return pkt.get();
+        RequestCacheValue res;
+
+        if (v == null) {
+            res = scaf.setResponseType(NO_KEY).build();
+        } else {
+            bytesUsed.addAndGet(-v.getValue().length);
+            res = scaf.setResponseType(DEL).build();
+        }
+
+        return generateAndSend(res);
     }
 
     /**

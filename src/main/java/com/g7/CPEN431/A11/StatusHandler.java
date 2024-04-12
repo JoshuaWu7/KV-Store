@@ -25,16 +25,16 @@ public class StatusHandler implements Runnable {
     AtomicInteger bytesUsed;
     BlockingQueue<byte[]> bytePool;
     boolean isOverloaded;
-    ConcurrentLinkedQueue<DatagramPacket> outbound;
     ConsistentMap serverRing;
     ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths;
     ExecutorService threadPool;
     AtomicLong lastReqTime;
     Semaphore keyUpdateRequested;
     Timer timer;
+    DatagramSocket outboundSocket;
 
 
-    public StatusHandler(DatagramSocket socket, Cache<RequestCacheKey, DatagramPacket> requestCache, ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock mapLock, AtomicInteger bytesUsed, BlockingQueue<byte[]> bytePool, boolean isOverloaded, ConcurrentLinkedQueue<DatagramPacket> outbound, ConsistentMap serverRing, ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths, ExecutorService threadPool, AtomicLong lastReqTime, Semaphore keyUpdateRequested, Timer time) {
+    public StatusHandler(DatagramSocket socket, Cache<RequestCacheKey, DatagramPacket> requestCache, ConcurrentMap<KeyWrapper, ValueWrapper> map, ReadWriteLock mapLock, AtomicInteger bytesUsed, BlockingQueue<byte[]> bytePool, boolean isOverloaded, ConsistentMap serverRing, ConcurrentLinkedQueue<ServerRecord> pendingRecordDeaths, ExecutorService threadPool, AtomicLong lastReqTime, Semaphore keyUpdateRequested, Timer time, DatagramSocket outboundSocket) {
         this.socket = socket;
         this.requestCache = requestCache;
         this.map = map;
@@ -42,18 +42,19 @@ public class StatusHandler implements Runnable {
         this.bytesUsed = bytesUsed;
         this.bytePool = bytePool;
         this.isOverloaded = isOverloaded;
-        this.outbound = outbound;
         this.serverRing = serverRing;
         this.pendingRecordDeaths = pendingRecordDeaths;
         this.threadPool = threadPool;
         this.lastReqTime = lastReqTime;
         this.keyUpdateRequested = keyUpdateRequested;
         this.timer = time;
+        this.outboundSocket = outboundSocket;
     }
 
     @Override
     public void run() {
-        ConcurrentLinkedQueue<DatagramPacket> vipOutbound = new ConcurrentLinkedQueue();
+        BlockingQueue<DatagramPacket> vipOutbound = new LinkedBlockingQueue<>();
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
         while(true)
         {
             DatagramPacket rp;
@@ -65,7 +66,6 @@ public class StatusHandler implements Runnable {
             }
 
 
-            Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
             new KVServerTaskHandler(
                     rp,
                     requestCache,
@@ -74,27 +74,14 @@ public class StatusHandler implements Runnable {
                     bytesUsed,
                     bytePool,
                     isOverloaded,
-                    vipOutbound,
                     serverRing,
                     pendingRecordDeaths,
                     threadPool,
                     lastReqTime,
                     keyUpdateRequested,
-                    timer
+                    timer,
+                    outboundSocket
                     ).run();
-
-            while(!vipOutbound.isEmpty())
-            {
-                try {
-                    socket.send(vipOutbound.poll());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            Thread.currentThread().setPriority(Thread.NORM_PRIORITY);
-
-
         }
     }
 }
